@@ -15,7 +15,6 @@ public:
     RayHieararchy(const vector<Reference<Primitive> > &p,bool onG, int chunk, int height);
     bool CanIntersect() const { return true; }
     ~RayHieararchy();
-    void Intersect(const RayDifferential *r, Intersection *in, float* rayWeight, bool* hit, int counter, float* coord) const;
     void Intersect(const RayDifferential *r, Intersection *in, float* rayWeight, bool* hit, int counter);
     bool Intersect(const Ray &ray, Intersection *isect) const;
     bool IntersectP(const Ray &ray) const;
