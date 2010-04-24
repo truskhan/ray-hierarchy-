@@ -55,6 +55,8 @@ int main(int argc, char *argv[]) {
         else filenames.push_back(argv[i]);
     }
 
+    options.pbrt_path = argv[0];
+
     // Print welcome banner
     if (!options.quiet) {
         printf("pbrt version %s of %s at %s [Using %d core(s)]\n",

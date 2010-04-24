@@ -94,6 +94,7 @@ struct Options {
     bool quickRender;
     bool quiet;
     bool openWindow;
+    const char* pbrt_path;
 };
 
 

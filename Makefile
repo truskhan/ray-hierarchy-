@@ -20,6 +20,12 @@ LEX=flex
 YACC=bison -d -v -t
 LEXLIB = -lfl
 
+#OPENCLINCLUDE=-I$(HOME)/ati-stream-sdk-v2.01-lnx32/include
+#OPENCLLIBS=-L$(HOME)/ati-stream-sdk-v2.01-lnx32/lib/x86 -lOpenCL
+
+OPENCLINCLUDE=-I$(HOME)/NVIDIA_GPU_Computing_SDK/sdk/shared/inc -I$(HOME)/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc
+OPENCLLIBS=-L$(HOME)/NVIDIA_GPU_Computing_SDK/OpenCL/common/lib -L$(HOME)/NVIDIA_GPU_Computing_SDK/sdk/shared/lib -L$(HOME)/NVIDIA_GPU_Computing_SDK/OpenCL/common/lib -L/home/hanci/NVIDIA_GPU_Computing_SDK/shared/lib -loclUtil -lOpenCL  -lshrutil
+
 EXRLIBS=$(EXRLIBDIR) -Bstatic -lIex -lIlmImf -lIlmThread -lImath -lIex -lHalf -Bdynamic
 ifeq ($(ARCH),Linux)
   EXRLIBS += -lpthread
@@ -36,12 +42,12 @@ CXX=g++
 LD=$(CXX) $(OPT)
 #-O2
 OPT=$(MARCH) -msse2 -mfpmath=sse
-INCLUDE=-I. -Icore $(EXRINCLUDE) -I/home/hanci/ati-stream-sdk-v2.01-lnx32/include 
+INCLUDE=-I. -Icore $(EXRINCLUDE) $(OPENCLINCLUDE) 
 WARN=-Wall
 CWD=$(shell pwd)
 CXXFLAGS=$(OPT) $(INCLUDE) $(WARN) $(DEFS) -g #-pg -g
 CCFLAGS=$(CXXFLAGS)
-LIBS=$(LEXLIB) $(EXRLIBDIR) $(EXRLIBS) -lm -L/home/hanci/ati-stream-sdk-v2.01-lnx32/lib/x86/ -lOpenCL
+LIBS=$(LEXLIB) $(EXRLIBDIR) $(EXRLIBS) -lm $(OPENCLLIBS)
 LIBSRCS=$(wildcard core/*.cpp) core/pbrtlex.cpp core/pbrtparse.cpp
 LIBSRCS += $(wildcard accelerators/*.cpp cameras/*.cpp film/*.cpp filters/*.cpp )
 LIBSRCS += $(wildcard integrators/*.cpp lights/*.cpp materials/*.cpp renderers/*.cpp )

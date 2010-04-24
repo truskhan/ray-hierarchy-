@@ -152,7 +152,7 @@ bool RayHieararchy::Intersect(const Triangle* shape, const Ray &ray, float *tHit
 size_t RayHieararchy::ConstructRayHierarchy( cl_uint count, cl_uint chunk, cl_uint * height){
   assert(*height > 0);
   size_t b = 3;
-  size_t tn = ocl->CreateTask("../cl/rayhierarchy.cl", "/home/hanci/Ploha/PBRT0704/bin/pbrt", "rayhconstruct", "oclRayhconstruct.ptx", (count+chunk-1)/chunk, 64);//zaokrouhleni nahoru
+  size_t tn = ocl->CreateTask("../cl/rayhierarchy.cl", PbrtOptions.pbrt_path, "rayhconstruct", "oclRayhconstruct.ptx", (count+chunk-1)/chunk, 64);//zaokrouhleni nahoru
   OpenCLTask* gpuray = ocl->getTask(tn);
 
   flags[0] = flags[1] = CL_MEM_READ_ONLY;
@@ -208,7 +208,7 @@ size_t RayHieararchy::ConstructRayHierarchy( cl_uint count, cl_uint chunk, cl_ui
 
   b = 1;
   levelcount =  (count+chunk-1)/chunk;
-  size_t tasknum = ocl->CreateTask("../cl/rayhierarchy.cl", "/home/hanci/Ploha/PBRT0704/bin/pbrt", "rayLevelConstruct", "rayLevelConstruct.ptx", (levelcount+1)/2, 64);
+  size_t tasknum = ocl->CreateTask("../cl/rayhierarchy.cl", PbrtOptions.pbrt_path, "rayLevelConstruct", "rayLevelConstruct.ptx", (levelcount+1)/2, 64);
   OpenCLTask* gpurayl = ocl->getTask(tasknum);
   gpurayl->InitBuffers(b);
   gpurayl->CopyBuffers(2,3,0,gpuray);
@@ -280,7 +280,7 @@ void RayHieararchy::Intersect(const RayDifferential *r, Intersection *in,
     OpenCLTask* gpuray = ocl->getTask(tn1);
 
     size_t b = 8;
-    size_t tn2 = ocl->CreateTask("../cl/rayhierarchy.cl", "/home/hanci/Ploha/PBRT0704/bin/pbrt", "IntersectionR", "oclIntersection.ptx", triangleCount, 32);
+    size_t tn2 = ocl->CreateTask("../cl/rayhierarchy.cl", PbrtOptions.pbrt_path, "IntersectionR", "oclIntersection.ptx", triangleCount, 32);
     OpenCLTask* gput = ocl->getTask(tn2);
     gput->InitBuffers(b);
     gput->CopyBuffers(0,3,1,gpuray);
@@ -342,7 +342,7 @@ void RayHieararchy::Intersect(const RayDifferential *r, Intersection *in,
     }
 
     b = 7;
-    size_t tn3 = ocl->CreateTask("../cl/rayhierarchy.cl", "/home/hanci/Ploha/PBRT0704/bin/pbrt", "computeDpTuTv", "oclcomputeDpTuTv.ptx", count, 32);
+    size_t tn3 = ocl->CreateTask("../cl/rayhierarchy.cl", PbrtOptions.pbrt_path, "computeDpTuTv", "oclcomputeDpTuTv.ptx", count, 32);
     OpenCLTask* gpuRayO = ocl->getTask(tn3);
     gpuRayO->InitBuffers(b);
     gpuRayO->CopyBuffers(0,3,0,gput); // 0 vertex, 1 dir, 2 origin
@@ -486,7 +486,7 @@ void RayHieararchy::IntersectP(const Ray* r, unsigned char* occluded, const size
     size_t tn1 = ConstructRayHierarchy(count,chunk,&height);
     OpenCLTask* gpuray = ocl->getTask(tn1);
 
-    size_t tn2 = ocl->CreateTask ("../cl/rayhierarchy.cl", "/home/hanci/Ploha/PBRT0704/bin/pbrt", "IntersectionP", "oclIntersectionP.ptx", count, 64);
+    size_t tn2 = ocl->CreateTask ("../cl/rayhierarchy.cl", PbrtOptions.pbrt_path, "IntersectionP", "oclIntersectionP.ptx", count, 64);
     OpenCLTask* gput = ocl->getTask(tn2);
     size_t b = 7;
     gput->InitBuffers(b);
