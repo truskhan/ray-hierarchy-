@@ -1,0 +1,1325 @@
+Terminals unused in grammar
+
+   ID
+
+
+Gramatika
+
+    0 $accept: start $end
+
+    1 start: pbrt_stmt_list
+
+    2 array_init: /* prázdný */
+
+    3 string_array_init: /* prázdný */
+
+    4 num_array_init: /* prázdný */
+
+    5 array: string_array
+    6      | num_array
+
+    7 string_array: array_init LBRACK string_list RBRACK
+    8             | single_element_string_array
+
+    9 single_element_string_array: array_init string_list_entry
+
+   10 string_list: string_list string_list_entry
+   11            | string_list_entry
+
+   12 string_list_entry: string_array_init STRING
+
+   13 num_array: array_init LBRACK num_list RBRACK
+   14          | single_element_num_array
+
+   15 single_element_num_array: array_init num_list_entry
+
+   16 num_list: num_list num_list_entry
+   17         | num_list_entry
+
+   18 num_list_entry: num_array_init NUM
+
+   19 paramlist: paramlist_init paramlist_contents
+
+   20 paramlist_init: /* prázdný */
+
+   21 paramlist_contents: paramlist_entry paramlist_contents
+   22                   | /* prázdný */
+
+   23 paramlist_entry: STRING array
+
+   24 pbrt_stmt_list: pbrt_stmt_list pbrt_stmt
+   25               | pbrt_stmt
+
+   26 pbrt_stmt: ACCELERATOR STRING paramlist
+   27          | ACTIVETRANSFORM ALL
+   28          | ACTIVETRANSFORM ENDTIME
+   29          | ACTIVETRANSFORM STARTTIME
+   30          | AREALIGHTSOURCE STRING paramlist
+   31          | ATTRIBUTEBEGIN
+   32          | ATTRIBUTEEND
+   33          | CAMERA STRING paramlist
+   34          | CONCATTRANSFORM num_array
+   35          | COORDINATESYSTEM STRING
+   36          | COORDSYSTRANSFORM STRING
+   37          | FILM STRING paramlist
+   38          | IDENTITY
+   39          | LIGHTSOURCE STRING paramlist
+   40          | LOOKAT NUM NUM NUM NUM NUM NUM NUM NUM NUM
+   41          | MAKENAMEDMATERIAL STRING paramlist
+   42          | MATERIAL STRING paramlist
+   43          | NAMEDMATERIAL STRING
+   44          | OBJECTBEGIN STRING
+   45          | OBJECTEND
+   46          | OBJECTINSTANCE STRING
+   47          | PIXELFILTER STRING paramlist
+   48          | RENDERER STRING paramlist
+   49          | REVERSEORIENTATION
+   50          | ROTATE NUM NUM NUM NUM
+   51          | SAMPLER STRING paramlist
+   52          | SCALE NUM NUM NUM
+   53          | SHAPE STRING paramlist
+   54          | SURFACEINTEGRATOR STRING paramlist
+   55          | TEXTURE STRING STRING STRING paramlist
+   56          | TRANSFORMBEGIN
+   57          | TRANSFORMEND
+   58          | TRANSFORMTIMES NUM NUM
+   59          | TRANSFORM num_array
+   60          | TRANSLATE NUM NUM NUM
+   61          | VOLUMEINTEGRATOR STRING paramlist
+   62          | VOLUME STRING paramlist
+   63          | WORLDBEGIN
+   64          | WORLDEND
+
+
+Terminály s pravidly, ve kterých se objevují
+
+$end (0) 0
+error (256)
+STRING (258) 12 23 26 30 33 35 36 37 39 41 42 43 44 46 47 48 51 53
+    54 55 61 62
+ID (259)
+NUM (260) 18 40 50 52 58 60
+LBRACK (261) 7 13
+RBRACK (262) 7 13
+ACCELERATOR (263) 26
+ACTIVETRANSFORM (264) 27 28 29
+ALL (265) 27
+AREALIGHTSOURCE (266) 30
+ATTRIBUTEBEGIN (267) 31
+ATTRIBUTEEND (268) 32
+CAMERA (269) 33
+CONCATTRANSFORM (270) 34
+COORDINATESYSTEM (271) 35
+COORDSYSTRANSFORM (272) 36
+ENDTIME (273) 28
+FILM (274) 37
+IDENTITY (275) 38
+LIGHTSOURCE (276) 39
+LOOKAT (277) 40
+MAKENAMEDMATERIAL (278) 41
+MATERIAL (279) 42
+NAMEDMATERIAL (280) 43
+OBJECTBEGIN (281) 44
+OBJECTEND (282) 45
+OBJECTINSTANCE (283) 46
+PIXELFILTER (284) 47
+RENDERER (285) 48
+REVERSEORIENTATION (286) 49
+ROTATE (287) 50
+SAMPLER (288) 51
+SCALE (289) 52
+SHAPE (290) 53
+STARTTIME (291) 29
+SURFACEINTEGRATOR (292) 54
+TEXTURE (293) 55
+TRANSFORMBEGIN (294) 56
+TRANSFORMEND (295) 57
+TRANSFORMTIMES (296) 58
+TRANSFORM (297) 59
+TRANSLATE (298) 60
+VOLUME (299) 62
+VOLUMEINTEGRATOR (300) 61
+WORLDBEGIN (301) 63
+WORLDEND (302) 64
+HIGH_PRECEDENCE (303)
+
+
+Neterminály s pravidly, ve kterých se objevují
+
+$accept (49)
+    vlevo: 0
+start (50)
+    vlevo: 1, vpravo: 0
+array_init (51)
+    vlevo: 2, vpravo: 7 9 13 15
+string_array_init (52)
+    vlevo: 3, vpravo: 12
+num_array_init (53)
+    vlevo: 4, vpravo: 18
+array (54)
+    vlevo: 5 6, vpravo: 23
+string_array (55)
+    vlevo: 7 8, vpravo: 5
+single_element_string_array (56)
+    vlevo: 9, vpravo: 8
+string_list (57)
+    vlevo: 10 11, vpravo: 7 10
+string_list_entry (58)
+    vlevo: 12, vpravo: 9 10 11
+num_array (59)
+    vlevo: 13 14, vpravo: 6 34 59
+single_element_num_array (60)
+    vlevo: 15, vpravo: 14
+num_list (61)
+    vlevo: 16 17, vpravo: 13 16
+num_list_entry (62)
+    vlevo: 18, vpravo: 15 16 17
+paramlist (63)
+    vlevo: 19, vpravo: 26 30 33 37 39 41 42 47 48 51 53 54 55 61 62
+paramlist_init (64)
+    vlevo: 20, vpravo: 19
+paramlist_contents (65)
+    vlevo: 21 22, vpravo: 19 21
+paramlist_entry (66)
+    vlevo: 23, vpravo: 21
+pbrt_stmt_list (67)
+    vlevo: 24 25, vpravo: 1 24
+pbrt_stmt (68)
+    vlevo: 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44
+    45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64, vpravo:
+    24 25
+
+
+stav 0
+
+    0 $accept: . start $end
+
+    ACCELERATOR         posunout a přejít do stavu 1
+    ACTIVETRANSFORM     posunout a přejít do stavu 2
+    AREALIGHTSOURCE     posunout a přejít do stavu 3
+    ATTRIBUTEBEGIN      posunout a přejít do stavu 4
+    ATTRIBUTEEND        posunout a přejít do stavu 5
+    CAMERA              posunout a přejít do stavu 6
+    CONCATTRANSFORM     posunout a přejít do stavu 7
+    COORDINATESYSTEM    posunout a přejít do stavu 8
+    COORDSYSTRANSFORM   posunout a přejít do stavu 9
+    FILM                posunout a přejít do stavu 10
+    IDENTITY            posunout a přejít do stavu 11
+    LIGHTSOURCE         posunout a přejít do stavu 12
+    LOOKAT              posunout a přejít do stavu 13
+    MAKENAMEDMATERIAL   posunout a přejít do stavu 14
+    MATERIAL            posunout a přejít do stavu 15
+    NAMEDMATERIAL       posunout a přejít do stavu 16
+    OBJECTBEGIN         posunout a přejít do stavu 17
+    OBJECTEND           posunout a přejít do stavu 18
+    OBJECTINSTANCE      posunout a přejít do stavu 19
+    PIXELFILTER         posunout a přejít do stavu 20
+    RENDERER            posunout a přejít do stavu 21
+    REVERSEORIENTATION  posunout a přejít do stavu 22
+    ROTATE              posunout a přejít do stavu 23
+    SAMPLER             posunout a přejít do stavu 24
+    SCALE               posunout a přejít do stavu 25
+    SHAPE               posunout a přejít do stavu 26
+    SURFACEINTEGRATOR   posunout a přejít do stavu 27
+    TEXTURE             posunout a přejít do stavu 28
+    TRANSFORMBEGIN      posunout a přejít do stavu 29
+    TRANSFORMEND        posunout a přejít do stavu 30
+    TRANSFORMTIMES      posunout a přejít do stavu 31
+    TRANSFORM           posunout a přejít do stavu 32
+    TRANSLATE           posunout a přejít do stavu 33
+    VOLUME              posunout a přejít do stavu 34
+    VOLUMEINTEGRATOR    posunout a přejít do stavu 35
+    WORLDBEGIN          posunout a přejít do stavu 36
+    WORLDEND            posunout a přejít do stavu 37
+
+    start           přejít do stavu 38
+    pbrt_stmt_list  přejít do stavu 39
+    pbrt_stmt       přejít do stavu 40
+
+
+stav 1
+
+   26 pbrt_stmt: ACCELERATOR . STRING paramlist
+
+    STRING  posunout a přejít do stavu 41
+
+
+stav 2
+
+   27 pbrt_stmt: ACTIVETRANSFORM . ALL
+   28          | ACTIVETRANSFORM . ENDTIME
+   29          | ACTIVETRANSFORM . STARTTIME
+
+    ALL        posunout a přejít do stavu 42
+    ENDTIME    posunout a přejít do stavu 43
+    STARTTIME  posunout a přejít do stavu 44
+
+
+stav 3
+
+   30 pbrt_stmt: AREALIGHTSOURCE . STRING paramlist
+
+    STRING  posunout a přejít do stavu 45
+
+
+stav 4
+
+   31 pbrt_stmt: ATTRIBUTEBEGIN .
+
+    $výchozí  reduce using rule 31 (pbrt_stmt)
+
+
+stav 5
+
+   32 pbrt_stmt: ATTRIBUTEEND .
+
+    $výchozí  reduce using rule 32 (pbrt_stmt)
+
+
+stav 6
+
+   33 pbrt_stmt: CAMERA . STRING paramlist
+
+    STRING  posunout a přejít do stavu 46
+
+
+stav 7
+
+   34 pbrt_stmt: CONCATTRANSFORM . num_array
+
+    $výchozí  reduce using rule 2 (array_init)
+
+    array_init                přejít do stavu 47
+    num_array                 přejít do stavu 48
+    single_element_num_array  přejít do stavu 49
+
+
+stav 8
+
+   35 pbrt_stmt: COORDINATESYSTEM . STRING
+
+    STRING  posunout a přejít do stavu 50
+
+
+stav 9
+
+   36 pbrt_stmt: COORDSYSTRANSFORM . STRING
+
+    STRING  posunout a přejít do stavu 51
+
+
+stav 10
+
+   37 pbrt_stmt: FILM . STRING paramlist
+
+    STRING  posunout a přejít do stavu 52
+
+
+stav 11
+
+   38 pbrt_stmt: IDENTITY .
+
+    $výchozí  reduce using rule 38 (pbrt_stmt)
+
+
+stav 12
+
+   39 pbrt_stmt: LIGHTSOURCE . STRING paramlist
+
+    STRING  posunout a přejít do stavu 53
+
+
+stav 13
+
+   40 pbrt_stmt: LOOKAT . NUM NUM NUM NUM NUM NUM NUM NUM NUM
+
+    NUM  posunout a přejít do stavu 54
+
+
+stav 14
+
+   41 pbrt_stmt: MAKENAMEDMATERIAL . STRING paramlist
+
+    STRING  posunout a přejít do stavu 55
+
+
+stav 15
+
+   42 pbrt_stmt: MATERIAL . STRING paramlist
+
+    STRING  posunout a přejít do stavu 56
+
+
+stav 16
+
+   43 pbrt_stmt: NAMEDMATERIAL . STRING
+
+    STRING  posunout a přejít do stavu 57
+
+
+stav 17
+
+   44 pbrt_stmt: OBJECTBEGIN . STRING
+
+    STRING  posunout a přejít do stavu 58
+
+
+stav 18
+
+   45 pbrt_stmt: OBJECTEND .
+
+    $výchozí  reduce using rule 45 (pbrt_stmt)
+
+
+stav 19
+
+   46 pbrt_stmt: OBJECTINSTANCE . STRING
+
+    STRING  posunout a přejít do stavu 59
+
+
+stav 20
+
+   47 pbrt_stmt: PIXELFILTER . STRING paramlist
+
+    STRING  posunout a přejít do stavu 60
+
+
+stav 21
+
+   48 pbrt_stmt: RENDERER . STRING paramlist
+
+    STRING  posunout a přejít do stavu 61
+
+
+stav 22
+
+   49 pbrt_stmt: REVERSEORIENTATION .
+
+    $výchozí  reduce using rule 49 (pbrt_stmt)
+
+
+stav 23
+
+   50 pbrt_stmt: ROTATE . NUM NUM NUM NUM
+
+    NUM  posunout a přejít do stavu 62
+
+
+stav 24
+
+   51 pbrt_stmt: SAMPLER . STRING paramlist
+
+    STRING  posunout a přejít do stavu 63
+
+
+stav 25
+
+   52 pbrt_stmt: SCALE . NUM NUM NUM
+
+    NUM  posunout a přejít do stavu 64
+
+
+stav 26
+
+   53 pbrt_stmt: SHAPE . STRING paramlist
+
+    STRING  posunout a přejít do stavu 65
+
+
+stav 27
+
+   54 pbrt_stmt: SURFACEINTEGRATOR . STRING paramlist
+
+    STRING  posunout a přejít do stavu 66
+
+
+stav 28
+
+   55 pbrt_stmt: TEXTURE . STRING STRING STRING paramlist
+
+    STRING  posunout a přejít do stavu 67
+
+
+stav 29
+
+   56 pbrt_stmt: TRANSFORMBEGIN .
+
+    $výchozí  reduce using rule 56 (pbrt_stmt)
+
+
+stav 30
+
+   57 pbrt_stmt: TRANSFORMEND .
+
+    $výchozí  reduce using rule 57 (pbrt_stmt)
+
+
+stav 31
+
+   58 pbrt_stmt: TRANSFORMTIMES . NUM NUM
+
+    NUM  posunout a přejít do stavu 68
+
+
+stav 32
+
+   59 pbrt_stmt: TRANSFORM . num_array
+
+    $výchozí  reduce using rule 2 (array_init)
+
+    array_init                přejít do stavu 47
+    num_array                 přejít do stavu 69
+    single_element_num_array  přejít do stavu 49
+
+
+stav 33
+
+   60 pbrt_stmt: TRANSLATE . NUM NUM NUM
+
+    NUM  posunout a přejít do stavu 70
+
+
+stav 34
+
+   62 pbrt_stmt: VOLUME . STRING paramlist
+
+    STRING  posunout a přejít do stavu 71
+
+
+stav 35
+
+   61 pbrt_stmt: VOLUMEINTEGRATOR . STRING paramlist
+
+    STRING  posunout a přejít do stavu 72
+
+
+stav 36
+
+   63 pbrt_stmt: WORLDBEGIN .
+
+    $výchozí  reduce using rule 63 (pbrt_stmt)
+
+
+stav 37
+
+   64 pbrt_stmt: WORLDEND .
+
+    $výchozí  reduce using rule 64 (pbrt_stmt)
+
+
+stav 38
+
+    0 $accept: start . $end
+
+    $end  posunout a přejít do stavu 73
+
+
+stav 39
+
+    1 start: pbrt_stmt_list .
+   24 pbrt_stmt_list: pbrt_stmt_list . pbrt_stmt
+
+    ACCELERATOR         posunout a přejít do stavu 1
+    ACTIVETRANSFORM     posunout a přejít do stavu 2
+    AREALIGHTSOURCE     posunout a přejít do stavu 3
+    ATTRIBUTEBEGIN      posunout a přejít do stavu 4
+    ATTRIBUTEEND        posunout a přejít do stavu 5
+    CAMERA              posunout a přejít do stavu 6
+    CONCATTRANSFORM     posunout a přejít do stavu 7
+    COORDINATESYSTEM    posunout a přejít do stavu 8
+    COORDSYSTRANSFORM   posunout a přejít do stavu 9
+    FILM                posunout a přejít do stavu 10
+    IDENTITY            posunout a přejít do stavu 11
+    LIGHTSOURCE         posunout a přejít do stavu 12
+    LOOKAT              posunout a přejít do stavu 13
+    MAKENAMEDMATERIAL   posunout a přejít do stavu 14
+    MATERIAL            posunout a přejít do stavu 15
+    NAMEDMATERIAL       posunout a přejít do stavu 16
+    OBJECTBEGIN         posunout a přejít do stavu 17
+    OBJECTEND           posunout a přejít do stavu 18
+    OBJECTINSTANCE      posunout a přejít do stavu 19
+    PIXELFILTER         posunout a přejít do stavu 20
+    RENDERER            posunout a přejít do stavu 21
+    REVERSEORIENTATION  posunout a přejít do stavu 22
+    ROTATE              posunout a přejít do stavu 23
+    SAMPLER             posunout a přejít do stavu 24
+    SCALE               posunout a přejít do stavu 25
+    SHAPE               posunout a přejít do stavu 26
+    SURFACEINTEGRATOR   posunout a přejít do stavu 27
+    TEXTURE             posunout a přejít do stavu 28
+    TRANSFORMBEGIN      posunout a přejít do stavu 29
+    TRANSFORMEND        posunout a přejít do stavu 30
+    TRANSFORMTIMES      posunout a přejít do stavu 31
+    TRANSFORM           posunout a přejít do stavu 32
+    TRANSLATE           posunout a přejít do stavu 33
+    VOLUME              posunout a přejít do stavu 34
+    VOLUMEINTEGRATOR    posunout a přejít do stavu 35
+    WORLDBEGIN          posunout a přejít do stavu 36
+    WORLDEND            posunout a přejít do stavu 37
+
+    $výchozí  reduce using rule 1 (start)
+
+    pbrt_stmt  přejít do stavu 74
+
+
+stav 40
+
+   25 pbrt_stmt_list: pbrt_stmt .
+
+    $výchozí  reduce using rule 25 (pbrt_stmt_list)
+
+
+stav 41
+
+   26 pbrt_stmt: ACCELERATOR STRING . paramlist
+
+    $výchozí  reduce using rule 20 (paramlist_init)
+
+    paramlist       přejít do stavu 75
+    paramlist_init  přejít do stavu 76
+
+
+stav 42
+
+   27 pbrt_stmt: ACTIVETRANSFORM ALL .
+
+    $výchozí  reduce using rule 27 (pbrt_stmt)
+
+
+stav 43
+
+   28 pbrt_stmt: ACTIVETRANSFORM ENDTIME .
+
+    $výchozí  reduce using rule 28 (pbrt_stmt)
+
+
+stav 44
+
+   29 pbrt_stmt: ACTIVETRANSFORM STARTTIME .
+
+    $výchozí  reduce using rule 29 (pbrt_stmt)
+
+
+stav 45
+
+   30 pbrt_stmt: AREALIGHTSOURCE STRING . paramlist
+
+    $výchozí  reduce using rule 20 (paramlist_init)
+
+    paramlist       přejít do stavu 77
+    paramlist_init  přejít do stavu 76
+
+
+stav 46
+
+   33 pbrt_stmt: CAMERA STRING . paramlist
+
+    $výchozí  reduce using rule 20 (paramlist_init)
+
+    paramlist       přejít do stavu 78
+    paramlist_init  přejít do stavu 76
+
+
+stav 47
+
+   13 num_array: array_init . LBRACK num_list RBRACK
+   15 single_element_num_array: array_init . num_list_entry
+
+    LBRACK  posunout a přejít do stavu 79
+
+    $výchozí  reduce using rule 4 (num_array_init)
+
+    num_array_init  přejít do stavu 80
+    num_list_entry  přejít do stavu 81
+
+
+stav 48
+
+   34 pbrt_stmt: CONCATTRANSFORM num_array .
+
+    $výchozí  reduce using rule 34 (pbrt_stmt)
+
+
+stav 49
+
+   14 num_array: single_element_num_array .
+
+    $výchozí  reduce using rule 14 (num_array)
+
+
+stav 50
+
+   35 pbrt_stmt: COORDINATESYSTEM STRING .
+
+    $výchozí  reduce using rule 35 (pbrt_stmt)
+
+
+stav 51
+
+   36 pbrt_stmt: COORDSYSTRANSFORM STRING .
+
+    $výchozí  reduce using rule 36 (pbrt_stmt)
+
+
+stav 52
+
+   37 pbrt_stmt: FILM STRING . paramlist
+
+    $výchozí  reduce using rule 20 (paramlist_init)
+
+    paramlist       přejít do stavu 82
+    paramlist_init  přejít do stavu 76
+
+
+stav 53
+
+   39 pbrt_stmt: LIGHTSOURCE STRING . paramlist
+
+    $výchozí  reduce using rule 20 (paramlist_init)
+
+    paramlist       přejít do stavu 83
+    paramlist_init  přejít do stavu 76
+
+
+stav 54
+
+   40 pbrt_stmt: LOOKAT NUM . NUM NUM NUM NUM NUM NUM NUM NUM
+
+    NUM  posunout a přejít do stavu 84
+
+
+stav 55
+
+   41 pbrt_stmt: MAKENAMEDMATERIAL STRING . paramlist
+
+    $výchozí  reduce using rule 20 (paramlist_init)
+
+    paramlist       přejít do stavu 85
+    paramlist_init  přejít do stavu 76
+
+
+stav 56
+
+   42 pbrt_stmt: MATERIAL STRING . paramlist
+
+    $výchozí  reduce using rule 20 (paramlist_init)
+
+    paramlist       přejít do stavu 86
+    paramlist_init  přejít do stavu 76
+
+
+stav 57
+
+   43 pbrt_stmt: NAMEDMATERIAL STRING .
+
+    $výchozí  reduce using rule 43 (pbrt_stmt)
+
+
+stav 58
+
+   44 pbrt_stmt: OBJECTBEGIN STRING .
+
+    $výchozí  reduce using rule 44 (pbrt_stmt)
+
+
+stav 59
+
+   46 pbrt_stmt: OBJECTINSTANCE STRING .
+
+    $výchozí  reduce using rule 46 (pbrt_stmt)
+
+
+stav 60
+
+   47 pbrt_stmt: PIXELFILTER STRING . paramlist
+
+    $výchozí  reduce using rule 20 (paramlist_init)
+
+    paramlist       přejít do stavu 87
+    paramlist_init  přejít do stavu 76
+
+
+stav 61
+
+   48 pbrt_stmt: RENDERER STRING . paramlist
+
+    $výchozí  reduce using rule 20 (paramlist_init)
+
+    paramlist       přejít do stavu 88
+    paramlist_init  přejít do stavu 76
+
+
+stav 62
+
+   50 pbrt_stmt: ROTATE NUM . NUM NUM NUM
+
+    NUM  posunout a přejít do stavu 89
+
+
+stav 63
+
+   51 pbrt_stmt: SAMPLER STRING . paramlist
+
+    $výchozí  reduce using rule 20 (paramlist_init)
+
+    paramlist       přejít do stavu 90
+    paramlist_init  přejít do stavu 76
+
+
+stav 64
+
+   52 pbrt_stmt: SCALE NUM . NUM NUM
+
+    NUM  posunout a přejít do stavu 91
+
+
+stav 65
+
+   53 pbrt_stmt: SHAPE STRING . paramlist
+
+    $výchozí  reduce using rule 20 (paramlist_init)
+
+    paramlist       přejít do stavu 92
+    paramlist_init  přejít do stavu 76
+
+
+stav 66
+
+   54 pbrt_stmt: SURFACEINTEGRATOR STRING . paramlist
+
+    $výchozí  reduce using rule 20 (paramlist_init)
+
+    paramlist       přejít do stavu 93
+    paramlist_init  přejít do stavu 76
+
+
+stav 67
+
+   55 pbrt_stmt: TEXTURE STRING . STRING STRING paramlist
+
+    STRING  posunout a přejít do stavu 94
+
+
+stav 68
+
+   58 pbrt_stmt: TRANSFORMTIMES NUM . NUM
+
+    NUM  posunout a přejít do stavu 95
+
+
+stav 69
+
+   59 pbrt_stmt: TRANSFORM num_array .
+
+    $výchozí  reduce using rule 59 (pbrt_stmt)
+
+
+stav 70
+
+   60 pbrt_stmt: TRANSLATE NUM . NUM NUM
+
+    NUM  posunout a přejít do stavu 96
+
+
+stav 71
+
+   62 pbrt_stmt: VOLUME STRING . paramlist
+
+    $výchozí  reduce using rule 20 (paramlist_init)
+
+    paramlist       přejít do stavu 97
+    paramlist_init  přejít do stavu 76
+
+
+stav 72
+
+   61 pbrt_stmt: VOLUMEINTEGRATOR STRING . paramlist
+
+    $výchozí  reduce using rule 20 (paramlist_init)
+
+    paramlist       přejít do stavu 98
+    paramlist_init  přejít do stavu 76
+
+
+stav 73
+
+    0 $accept: start $end .
+
+    $výchozí  přijmout
+
+
+stav 74
+
+   24 pbrt_stmt_list: pbrt_stmt_list pbrt_stmt .
+
+    $výchozí  reduce using rule 24 (pbrt_stmt_list)
+
+
+stav 75
+
+   26 pbrt_stmt: ACCELERATOR STRING paramlist .
+
+    $výchozí  reduce using rule 26 (pbrt_stmt)
+
+
+stav 76
+
+   19 paramlist: paramlist_init . paramlist_contents
+
+    STRING  posunout a přejít do stavu 99
+
+    $výchozí  reduce using rule 22 (paramlist_contents)
+
+    paramlist_contents  přejít do stavu 100
+    paramlist_entry     přejít do stavu 101
+
+
+stav 77
+
+   30 pbrt_stmt: AREALIGHTSOURCE STRING paramlist .
+
+    $výchozí  reduce using rule 30 (pbrt_stmt)
+
+
+stav 78
+
+   33 pbrt_stmt: CAMERA STRING paramlist .
+
+    $výchozí  reduce using rule 33 (pbrt_stmt)
+
+
+stav 79
+
+   13 num_array: array_init LBRACK . num_list RBRACK
+
+    $výchozí  reduce using rule 4 (num_array_init)
+
+    num_array_init  přejít do stavu 80
+    num_list        přejít do stavu 102
+    num_list_entry  přejít do stavu 103
+
+
+stav 80
+
+   18 num_list_entry: num_array_init . NUM
+
+    NUM  posunout a přejít do stavu 104
+
+
+stav 81
+
+   15 single_element_num_array: array_init num_list_entry .
+
+    $výchozí  reduce using rule 15 (single_element_num_array)
+
+
+stav 82
+
+   37 pbrt_stmt: FILM STRING paramlist .
+
+    $výchozí  reduce using rule 37 (pbrt_stmt)
+
+
+stav 83
+
+   39 pbrt_stmt: LIGHTSOURCE STRING paramlist .
+
+    $výchozí  reduce using rule 39 (pbrt_stmt)
+
+
+stav 84
+
+   40 pbrt_stmt: LOOKAT NUM NUM . NUM NUM NUM NUM NUM NUM NUM
+
+    NUM  posunout a přejít do stavu 105
+
+
+stav 85
+
+   41 pbrt_stmt: MAKENAMEDMATERIAL STRING paramlist .
+
+    $výchozí  reduce using rule 41 (pbrt_stmt)
+
+
+stav 86
+
+   42 pbrt_stmt: MATERIAL STRING paramlist .
+
+    $výchozí  reduce using rule 42 (pbrt_stmt)
+
+
+stav 87
+
+   47 pbrt_stmt: PIXELFILTER STRING paramlist .
+
+    $výchozí  reduce using rule 47 (pbrt_stmt)
+
+
+stav 88
+
+   48 pbrt_stmt: RENDERER STRING paramlist .
+
+    $výchozí  reduce using rule 48 (pbrt_stmt)
+
+
+stav 89
+
+   50 pbrt_stmt: ROTATE NUM NUM . NUM NUM
+
+    NUM  posunout a přejít do stavu 106
+
+
+stav 90
+
+   51 pbrt_stmt: SAMPLER STRING paramlist .
+
+    $výchozí  reduce using rule 51 (pbrt_stmt)
+
+
+stav 91
+
+   52 pbrt_stmt: SCALE NUM NUM . NUM
+
+    NUM  posunout a přejít do stavu 107
+
+
+stav 92
+
+   53 pbrt_stmt: SHAPE STRING paramlist .
+
+    $výchozí  reduce using rule 53 (pbrt_stmt)
+
+
+stav 93
+
+   54 pbrt_stmt: SURFACEINTEGRATOR STRING paramlist .
+
+    $výchozí  reduce using rule 54 (pbrt_stmt)
+
+
+stav 94
+
+   55 pbrt_stmt: TEXTURE STRING STRING . STRING paramlist
+
+    STRING  posunout a přejít do stavu 108
+
+
+stav 95
+
+   58 pbrt_stmt: TRANSFORMTIMES NUM NUM .
+
+    $výchozí  reduce using rule 58 (pbrt_stmt)
+
+
+stav 96
+
+   60 pbrt_stmt: TRANSLATE NUM NUM . NUM
+
+    NUM  posunout a přejít do stavu 109
+
+
+stav 97
+
+   62 pbrt_stmt: VOLUME STRING paramlist .
+
+    $výchozí  reduce using rule 62 (pbrt_stmt)
+
+
+stav 98
+
+   61 pbrt_stmt: VOLUMEINTEGRATOR STRING paramlist .
+
+    $výchozí  reduce using rule 61 (pbrt_stmt)
+
+
+stav 99
+
+   23 paramlist_entry: STRING . array
+
+    $výchozí  reduce using rule 2 (array_init)
+
+    array_init                   přejít do stavu 110
+    array                        přejít do stavu 111
+    string_array                 přejít do stavu 112
+    single_element_string_array  přejít do stavu 113
+    num_array                    přejít do stavu 114
+    single_element_num_array     přejít do stavu 49
+
+
+stav 100
+
+   19 paramlist: paramlist_init paramlist_contents .
+
+    $výchozí  reduce using rule 19 (paramlist)
+
+
+stav 101
+
+   21 paramlist_contents: paramlist_entry . paramlist_contents
+
+    STRING  posunout a přejít do stavu 99
+
+    $výchozí  reduce using rule 22 (paramlist_contents)
+
+    paramlist_contents  přejít do stavu 115
+    paramlist_entry     přejít do stavu 101
+
+
+stav 102
+
+   13 num_array: array_init LBRACK num_list . RBRACK
+   16 num_list: num_list . num_list_entry
+
+    RBRACK  posunout a přejít do stavu 116
+
+    $výchozí  reduce using rule 4 (num_array_init)
+
+    num_array_init  přejít do stavu 80
+    num_list_entry  přejít do stavu 117
+
+
+stav 103
+
+   17 num_list: num_list_entry .
+
+    $výchozí  reduce using rule 17 (num_list)
+
+
+stav 104
+
+   18 num_list_entry: num_array_init NUM .
+
+    $výchozí  reduce using rule 18 (num_list_entry)
+
+
+stav 105
+
+   40 pbrt_stmt: LOOKAT NUM NUM NUM . NUM NUM NUM NUM NUM NUM
+
+    NUM  posunout a přejít do stavu 118
+
+
+stav 106
+
+   50 pbrt_stmt: ROTATE NUM NUM NUM . NUM
+
+    NUM  posunout a přejít do stavu 119
+
+
+stav 107
+
+   52 pbrt_stmt: SCALE NUM NUM NUM .
+
+    $výchozí  reduce using rule 52 (pbrt_stmt)
+
+
+stav 108
+
+   55 pbrt_stmt: TEXTURE STRING STRING STRING . paramlist
+
+    $výchozí  reduce using rule 20 (paramlist_init)
+
+    paramlist       přejít do stavu 120
+    paramlist_init  přejít do stavu 76
+
+
+stav 109
+
+   60 pbrt_stmt: TRANSLATE NUM NUM NUM .
+
+    $výchozí  reduce using rule 60 (pbrt_stmt)
+
+
+stav 110
+
+    7 string_array: array_init . LBRACK string_list RBRACK
+    9 single_element_string_array: array_init . string_list_entry
+   13 num_array: array_init . LBRACK num_list RBRACK
+   15 single_element_num_array: array_init . num_list_entry
+
+    LBRACK  posunout a přejít do stavu 121
+
+    NUM         reduce using rule 4 (num_array_init)
+    $výchozí  reduce using rule 3 (string_array_init)
+
+    string_array_init  přejít do stavu 122
+    num_array_init     přejít do stavu 80
+    string_list_entry  přejít do stavu 123
+    num_list_entry     přejít do stavu 81
+
+
+stav 111
+
+   23 paramlist_entry: STRING array .
+
+    $výchozí  reduce using rule 23 (paramlist_entry)
+
+
+stav 112
+
+    5 array: string_array .
+
+    $výchozí  reduce using rule 5 (array)
+
+
+stav 113
+
+    8 string_array: single_element_string_array .
+
+    $výchozí  reduce using rule 8 (string_array)
+
+
+stav 114
+
+    6 array: num_array .
+
+    $výchozí  reduce using rule 6 (array)
+
+
+stav 115
+
+   21 paramlist_contents: paramlist_entry paramlist_contents .
+
+    $výchozí  reduce using rule 21 (paramlist_contents)
+
+
+stav 116
+
+   13 num_array: array_init LBRACK num_list RBRACK .
+
+    $výchozí  reduce using rule 13 (num_array)
+
+
+stav 117
+
+   16 num_list: num_list num_list_entry .
+
+    $výchozí  reduce using rule 16 (num_list)
+
+
+stav 118
+
+   40 pbrt_stmt: LOOKAT NUM NUM NUM NUM . NUM NUM NUM NUM NUM
+
+    NUM  posunout a přejít do stavu 124
+
+
+stav 119
+
+   50 pbrt_stmt: ROTATE NUM NUM NUM NUM .
+
+    $výchozí  reduce using rule 50 (pbrt_stmt)
+
+
+stav 120
+
+   55 pbrt_stmt: TEXTURE STRING STRING STRING paramlist .
+
+    $výchozí  reduce using rule 55 (pbrt_stmt)
+
+
+stav 121
+
+    7 string_array: array_init LBRACK . string_list RBRACK
+   13 num_array: array_init LBRACK . num_list RBRACK
+
+    NUM         reduce using rule 4 (num_array_init)
+    $výchozí  reduce using rule 3 (string_array_init)
+
+    string_array_init  přejít do stavu 122
+    num_array_init     přejít do stavu 80
+    string_list        přejít do stavu 125
+    string_list_entry  přejít do stavu 126
+    num_list           přejít do stavu 102
+    num_list_entry     přejít do stavu 103
+
+
+stav 122
+
+   12 string_list_entry: string_array_init . STRING
+
+    STRING  posunout a přejít do stavu 127
+
+
+stav 123
+
+    9 single_element_string_array: array_init string_list_entry .
+
+    $výchozí  reduce using rule 9 (single_element_string_array)
+
+
+stav 124
+
+   40 pbrt_stmt: LOOKAT NUM NUM NUM NUM NUM . NUM NUM NUM NUM
+
+    NUM  posunout a přejít do stavu 128
+
+
+stav 125
+
+    7 string_array: array_init LBRACK string_list . RBRACK
+   10 string_list: string_list . string_list_entry
+
+    RBRACK  posunout a přejít do stavu 129
+
+    $výchozí  reduce using rule 3 (string_array_init)
+
+    string_array_init  přejít do stavu 122
+    string_list_entry  přejít do stavu 130
+
+
+stav 126
+
+   11 string_list: string_list_entry .
+
+    $výchozí  reduce using rule 11 (string_list)
+
+
+stav 127
+
+   12 string_list_entry: string_array_init STRING .
+
+    $výchozí  reduce using rule 12 (string_list_entry)
+
+
+stav 128
+
+   40 pbrt_stmt: LOOKAT NUM NUM NUM NUM NUM NUM . NUM NUM NUM
+
+    NUM  posunout a přejít do stavu 131
+
+
+stav 129
+
+    7 string_array: array_init LBRACK string_list RBRACK .
+
+    $výchozí  reduce using rule 7 (string_array)
+
+
+stav 130
+
+   10 string_list: string_list string_list_entry .
+
+    $výchozí  reduce using rule 10 (string_list)
+
+
+stav 131
+
+   40 pbrt_stmt: LOOKAT NUM NUM NUM NUM NUM NUM NUM . NUM NUM
+
+    NUM  posunout a přejít do stavu 132
+
+
+stav 132
+
+   40 pbrt_stmt: LOOKAT NUM NUM NUM NUM NUM NUM NUM NUM . NUM
+
+    NUM  posunout a přejít do stavu 133
+
+
+stav 133
+
+   40 pbrt_stmt: LOOKAT NUM NUM NUM NUM NUM NUM NUM NUM NUM .
+
+    $výchozí  reduce using rule 40 (pbrt_stmt)

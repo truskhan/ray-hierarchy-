@@ -39,14 +39,22 @@ public:
     // Scene Public Methods
     Scene(Primitive *accel, const vector<Light *> &lts, VolumeRegion *vr);
     ~Scene();
-    void Intersect(const RayDifferential* ray, Intersection *isect, bool* hit, float* rayWeight, int & count) const {
+    void Intersect(const RayDifferential* ray, Intersection *isect, bool* hit, float* rayWeight,int & count
+    #ifdef STAT_RAY_TRIANGLE
+    , Spectrum *Ls
+    #endif
+    ) const {
         NaiveAccel* na = dynamic_cast<NaiveAccel*> (aggregate);
         if ( na != NULL)
           na->Intersect(ray, isect, rayWeight, hit, count);
         else {
           RayHieararchy* rh = dynamic_cast<RayHieararchy*>(aggregate);
           if ( rh != NULL)
-            rh->Intersect(ray, isect, rayWeight, hit,count);
+            rh->Intersect(ray, isect, rayWeight, hit,count
+            #ifdef STAT_RAY_TRIANGLE
+            , Ls
+            #endif
+            );
           else
             Severe("Called Intersect with unsoppurted aggregate");
         }

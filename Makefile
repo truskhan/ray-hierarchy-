@@ -2,9 +2,10 @@ ARCH = $(shell uname)
 
 # user-configuration section
 
-EXRINCLUDE=-I/usr/local/include/OpenEXR -I/usr/include/OpenEXR 
-EXRLIBDIR=-L/usr/local/lib 
-DEFS= -DPBRT_STATS_COUNTERS -DPBRT_HAS_PTHREADS -DPBRT_HAS_OPENEXR  #-DPBRT_STATS_NONE -DPBRT_HAS_PTHREADS -DPBRT_HAS_OPENEXR 
+EXRINCLUDE=-I/usr/local/include/OpenEXR -I/usr/include/OpenEXR
+EXRLIBDIR=-L/usr/local/lib
+DEFS_DEFAULT= -DPBRT_HAS_PTHREADS -DPBRT_HAS_OPENEXR  #-DPBRT_STATS_NONE -DPBRT_HAS_PTHREADS -DPBRT_HAS_OPENEXR
+DEFS=$(DEFS_DEFAULT) -DSTAT_RAY_TRIANGLE -DPBRT_STATS_COUNTERS # -DDEBUG_OUTPUT
 
 # 32 bit
 DEFS+=-DPBRT_POINTER_SIZE=4
@@ -20,11 +21,11 @@ LEX=flex
 YACC=bison -d -v -t
 LEXLIB = -lfl
 
-#OPENCLINCLUDE=-I$(HOME)/ati-stream-sdk-v2.01-lnx32/include
-#OPENCLLIBS=-L$(HOME)/ati-stream-sdk-v2.01-lnx32/lib/x86 -lOpenCL
+OPENCLINCLUDE=-I$(HOME)/ati-stream-sdk-v2.01-lnx32/include
+OPENCLLIBS=-L$(HOME)/ati-stream-sdk-v2.01-lnx32/lib/x86 -lOpenCL
 
-OPENCLINCLUDE=-I$(HOME)/NVIDIA_GPU_Computing_SDK/sdk/shared/inc -I$(HOME)/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc
-OPENCLLIBS=-L$(HOME)/NVIDIA_GPU_Computing_SDK/OpenCL/common/lib -L$(HOME)/NVIDIA_GPU_Computing_SDK/sdk/shared/lib -L$(HOME)/NVIDIA_GPU_Computing_SDK/OpenCL/common/lib -L/home/hanci/NVIDIA_GPU_Computing_SDK/shared/lib -loclUtil -lOpenCL  -lshrutil
+#OPENCLINCLUDE=-I$(HOME)/NVIDIA_GPU_Computing_SDK/sdk/shared/inc -I$(HOME)/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc
+#OPENCLLIBS=-L$(HOME)/NVIDIA_GPU_Computing_SDK/OpenCL/common/lib -L$(HOME)/NVIDIA_GPU_Computing_SDK/sdk/shared/lib -L$(HOME)/NVIDIA_GPU_Computing_SDK/OpenCL/common/lib -L/home/hanci/NVIDIA_GPU_Computing_SDK/shared/lib -loclUtil -lOpenCL  -lshrutil
 
 EXRLIBS=$(EXRLIBDIR) -Bstatic -lIex -lIlmImf -lIlmThread -lImath -lIex -lHalf -Bdynamic
 ifeq ($(ARCH),Linux)
@@ -42,7 +43,7 @@ CXX=g++
 LD=$(CXX) $(OPT)
 #-O2
 OPT=$(MARCH) -msse2 -mfpmath=sse
-INCLUDE=-I. -Icore $(EXRINCLUDE) $(OPENCLINCLUDE) 
+INCLUDE=-I. -Icore $(EXRINCLUDE) $(OPENCLINCLUDE)
 WARN=-Wall
 CWD=$(shell pwd)
 CXXFLAGS=$(OPT) $(INCLUDE) $(WARN) $(DEFS) -g #-pg -g
@@ -152,6 +153,9 @@ core/pbrtparse.cpp: core/pbrtparse.yy
 	@if [ -e core/pbrtparse.hpp ]; then /bin/mv core/pbrtparse.hpp core/pbrtparse.hh; fi
 
 $(RENDERER_BINARY): $(RENDERER_OBJS) $(CORE_LIB)
+
+myclean:
+	rm -f objs/accelerators_rayhierarchy.o objs/core_GPUparallel.o
 
 clean:
 	rm -f objs/* bin/* core/pbrtlex.[ch]* core/pbrtparse.[ch]*

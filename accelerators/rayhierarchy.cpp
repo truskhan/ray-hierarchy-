@@ -7,7 +7,9 @@
 #include "intersection.h"
 #include "GPUparallel.h"
 #include <iostream>
-
+#if ( defined STAT_RAY_TRIANGLE || defined STAT_TRIANGLE_CONE)
+#include "imageio.h"
+#endif
 
 using namespace std;
 
@@ -252,13 +254,21 @@ size_t RayHieararchy::ConstructRayHierarchy( cl_uint count, cl_uint chunk, cl_ui
 
 //intersect computed on gpu with more rays
 void RayHieararchy::Intersect(const RayDifferential *r, Intersection *in,
-                               float* rayWeight, bool* hit, int count)  {
+                               float* rayWeight, bool* hit, int count
+    #ifdef STAT_RAY_TRIANGLE
+    , Spectrum *Ls
+    #endif
+    )  {
 
     data[1] = new cl_float[count*3]; //ray directions
     data[2] = new cl_float[count*3]; //ray origins
     data[4] = new cl_float[count*2]; //ray bounds
     data[5] = new cl_float[count];
-    data[9] = new cl_uint[count]; //for index
+    data[9] = new cl_uint[count]; //for index ALLOCA(cl_uint, count);
+    #ifdef STAT_RAY_TRIANGLE
+    data[10] = new float[count];
+    #endif
+
    for (int k = 0; k < count; ++k) {
       ((cl_float*)data[1])[3*k] = r[k].d[0];
       ((cl_float*)data[1])[3*k+1] = r[k].d[1];
@@ -274,12 +284,22 @@ void RayHieararchy::Intersect(const RayDifferential *r, Intersection *in,
       ((cl_float*)data[5])[k] = INFINITY-1; //should initialize on scene size
 
       ((cl_uint*)data[9])[k] = 0;
+      #ifdef STAT_RAY_TRIANGLE
+      ((cl_uint*)data[10])[k] = 0;
+      #endif
     }
 
     size_t tn1 = ConstructRayHierarchy(count,chunk,&height);
     OpenCLTask* gpuray = ocl->getTask(tn1);
 
     size_t b = 8;
+    #ifdef STAT_TRIANGLE_CONE
+     ++b;
+    #endif
+    #ifdef STAT_RAY_TRIANGLE
+    ++b;
+    #endif
+
     size_t tn2 = ocl->CreateTask("../cl/rayhierarchy.cl", PbrtOptions.pbrt_path, "IntersectionR", "oclIntersection.ptx", triangleCount, 32);
     OpenCLTask* gput = ocl->getTask(tn2);
     gput->InitBuffers(b);
@@ -296,22 +316,65 @@ void RayHieararchy::Intersect(const RayDifferential *r, Intersection *in,
     size[5] = sizeof(cl_float)*count; //for Thit
     size[6] = sizeof(cl_uint)*count; //index to shape
     size[7] = sizeof(cl_int)*triangleCount*height; //stack for every thread
+    b = 7;
+    #ifdef STAT_TRIANGLE_CONE
+    size[++b] = sizeof(cl_uint)*triangleCount;
+    flags[b] = CL_MEM_WRITE_ONLY;
+    #endif
+    #ifdef STAT_RAY_TRIANGLE
+    size[++b] = sizeof(cl_uint)*count;
+    flags[b] = CL_MEM_WRITE_ONLY;
+    #endif
 
-    if (!gput->CreateBuffers( size, flags)) exit(EXIT_FAILURE);
-    if (!gput->SetIntArgument((cl_uint)count)) exit(EXIT_FAILURE);
-    if (!gput->SetIntArgument((cl_uint)triangleCount)) exit(EXIT_FAILURE);
-    if (!gput->SetIntArgument((cl_uint)chunk)) exit(EXIT_FAILURE);
-    if (!gput->SetIntArgument((cl_uint)height)) exit(EXIT_FAILURE);
+    Assert(gput->CreateBuffers( size, flags));
+    Assert(gput->SetIntArgument((cl_int)count));
+    Assert(gput->SetIntArgument((cl_int)triangleCount));
+    Assert(gput->SetIntArgument((cl_int)chunk));
+    Assert(gput->SetIntArgument((cl_int)height));
 
     if (!gput->EnqueueWriteBuffer(size[0], 0, data[0] ))exit(EXIT_FAILURE);
     if (!gput->EnqueueWriteBuffer(size[4], 4, data[4] ))exit(EXIT_FAILURE);
     if (!gput->EnqueueWriteBuffer(size[5], 5, data[5] ))exit(EXIT_FAILURE);
     if (!gput->EnqueueWriteBuffer(size[6], 6, data[9] ))exit(EXIT_FAILURE);
+    #ifdef STAT_RAY_TRIANGLE
+    Assert(gput->EnqueueWriteBuffer(size[b], b, data[10]));
+    #endif
+
     if (!gput->Run())exit(EXIT_FAILURE);
 
     data[6] = data[5];
     if (!gput->EnqueueReadBuffer(size[5], 5, data[6])) exit(EXIT_FAILURE); //Thit
     if (!gput->EnqueueReadBuffer(size[6], 6, data[9])) exit(EXIT_FAILURE); //index
+    #ifdef STAT_RAY_TRIANGLE
+    Assert(gput->EnqueueReadBuffer(size[b], b, data[10]));
+    #ifdef DEBUG_OUTPUT
+    cout << endl << "ray triangle intersections test ";
+    #endif
+    uint i = 0;
+    uint temp;
+    for (i = 0; i < count; i++){
+        temp = Clamp(((cl_uint*)data[10])[i],0,255) ;
+        Ls[i] = Spectrum(temp);
+        #ifdef DEBUG_OUTPUT
+        cout << temp << ' ';
+        #endif
+    }
+    #ifdef DEBUG_OUTPUT
+    cout << endl;
+    #endif
+    delete [] ((uint*)data[10]);
+    return;
+    #endif
+    #ifdef STAT_TRIANGLE_CONE
+    data[10] = new cl_uint[triangleCount];
+    Assert(gput->EnqueueReadBuffer(size[8], 8, data[10]));
+    cout << endl << "triangle cone intersections ";
+    uint i = 0;
+    for ( i = 0; i < triangleCount; i++)
+      cout << (((uint*)data[10])[i]) << ' ';
+    cout <<  endl;
+    abort();
+    #endif
 
     /*cout << endl << "count " << count << " Index ";
     for ( int i = 0; i < 4; i++)
@@ -394,8 +457,7 @@ void RayHieararchy::Intersect(const RayDifferential *r, Intersection *in,
         index = (((cl_uint*)data[9])[i]);
         hit[i] = false;
         if ( !index ) continue;
-        if ( index >= triangleCount)
-          continue;
+        Assert( index < triangleCount);
         const GeometricPrimitive* p = (dynamic_cast<const GeometricPrimitive*> (primitives[index].GetPtr()));
         const Triangle* shape = dynamic_cast<const Triangle*> (p->GetShapePtr());
 
@@ -425,7 +487,7 @@ void RayHieararchy::Intersect(const RayDifferential *r, Intersection *in,
         PBRT_RAY_TRIANGLE_INTERSECTION_HIT(&r[i], r[i].maxt);
     }
 
-    delete [] ((cl_int*)data[9]);
+   // delete [] ((cl_int*)data[9]);
     delete [] ((cl_float*)data[1]);
     delete [] ((cl_float*)data[2]);
     //delete [] ((float*)data[3]);

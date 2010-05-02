@@ -436,7 +436,11 @@ void WriteImageTGA(const string &name, float *pixels,
     uchar *dst = outBuf;
     for (int y = yRes-1; y >= 0; --y) {
         for (int x = 0; x < xRes; ++x) {
+#ifdef STAT_RAY_TRIANGLE
+#define TO_BYTE(v) Clamp((int)v,0,255)
+#else
 #define TO_BYTE(v) (uint8_t(Clamp(255.f * powf((v), 1.f/2.3f), 0.f, 255.f)))
+#endif
             dst[0] = TO_BYTE(pixels[3*(y*xRes+x)+2]);
             dst[1] = TO_BYTE(pixels[3*(y*xRes+x)+1]);
             dst[2] = TO_BYTE(pixels[3*(y*xRes+x)+0]);
@@ -448,8 +452,6 @@ void WriteImageTGA(const string &name, float *pixels,
     free(outBuf);
     fclose(file);
 }
-
-
 
 
 /**

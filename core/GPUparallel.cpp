@@ -118,7 +118,17 @@ OpenCLTask::OpenCLTask(cl_context & context, cl_command_queue & queue, const cha
   #endif
   cpProgram = clCreateProgramWithSource(context, 1, (const char **)&cSourceCL, &szKernelLength, &ciErrNum);
 
-  ciErrNum = clBuildProgram(cpProgram, 0, NULL, NULL, NULL, NULL);//"-g", NULL, NULL);
+  ciErrNum = clBuildProgram(cpProgram, 0, NULL,
+  #ifdef STAT_TRIANGLE_CONE
+  "-DSTAT_TRIANGLE_CONE -g",
+  #else
+      #ifdef STAT_RAY_TRIANGLE
+      " -DSTAT_RAY_TRIANGLE -g",
+      #else
+      NULL,
+      #endif
+  #endif
+  NULL, NULL);//"-g", NULL, NULL);
   if (ciErrNum != CL_SUCCESS){
     // write out standard error, Build Log and PTX, then cleanup and exit
     shrLog(LOGBOTH | ERRORMSG, ciErrNum, STDERROR);
@@ -209,7 +219,7 @@ bool OpenCLTask::CreateBuffers( ){
 
 bool OpenCLTask::SetIntArgument(const cl_int & arg){
   #ifdef DEBUG_OUTPUT
-  cout << "set int argument " << endl;
+  cout << "set int argument " << argc << endl;
   #endif
   cl_int ciErrNum;
   ciErrNum = clSetKernelArg(ckKernel, argc++, sizeof(cl_int), (void*)&arg);

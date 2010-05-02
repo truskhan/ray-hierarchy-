@@ -94,6 +94,17 @@ ImageFilm::ImageFilm(int xres, int yres, Filter *filt, const float crop[4],
 
 void ImageFilm::AddSample(const CameraSample &sample,
                           const Spectrum &L) {
+    float xyz[3];
+    #ifdef STAT_RAY_TRIANGLE
+    //don't filter the statistical image
+    L.ToXYZ(xyz);
+    Pixel &pixel = (*pixels)(sample.imageX, sample.imageY);
+    pixel.Lxyz[0] += xyz[0];
+    pixel.Lxyz[1] += xyz[1];
+    pixel.Lxyz[2] += xyz[2];
+    pixel.weightSum += 1;
+    return;
+    #endif
     // Compute sample's raster extent
     float dimageX = sample.imageX - 0.5f;
     float dimageY = sample.imageY - 0.5f;
@@ -112,7 +123,6 @@ void ImageFilm::AddSample(const CameraSample &sample,
     }
 
     // Loop over filter support and add sample to pixel arrays
-    float xyz[3];
     L.ToXYZ(xyz);
 
     // Precompute $x$ and $y$ filter table offsets
@@ -259,7 +269,7 @@ void ImageFilm::UpdateDisplay(int x0, int y0, int x1, int y1,
             rgb[0] += splatScale * splatRGB[0];
             rgb[1] += splatScale * splatRGB[1];
             rgb[2] += splatScale * splatRGB[2];
-            
+
             *pp++ = SDL_MapRGB(sdlWindow->format,
                 uint8_t(Clamp(powf(rgb[0], 1./1.8), 0.f, 1.f) * 255),
                 uint8_t(Clamp(powf(rgb[1], 1./1.8), 0.f, 1.f) * 255),

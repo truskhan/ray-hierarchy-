@@ -2,7 +2,8 @@
 #define EPS 0.000002
 
 void intersectPAllLeaves (int j, const __global float* dir, const __global float* o, const __global float* bounds,
-__global unsigned char* tHit, float4 v1, float4 v2, float4 v3, float4 e1, float4 e2, int chunk ){
+__global unsigned char* tHit, float4 v1, float4 v2, float4 v3, float4 e1, float4 e2, int chunk
+){
     float4 s1, s2, d, rayd, rayo;
     float divisor, invDivisor, t, b1, b2;
     // process all rays in the cone
@@ -34,8 +35,12 @@ __global unsigned char* tHit, float4 v1, float4 v2, float4 v3, float4 e1, float4
 }
 
 void intersectAllLeaves (int j, const __global float* dir, const __global float* o,
-const __global float* bounds, global int* index, __global float* tHit, float4 v1, float4 v2, float4 v3,
-float4 e1, float4 e2, int chunk, int count ){
+const __global float* bounds, __global int* index, __global float* tHit, float4 v1, float4 v2, float4 v3,
+float4 e1, float4 e2, int chunk, int count
+#ifdef STAT_RAY_TRIANGLE
+, __global int* stat_rayTriangle
+#endif
+ ){
     float4 s1, s2, d, rayd, rayo;
     float divisor, invDivisor, t, b1, b2;
     // process all rays in the cone
@@ -43,6 +48,9 @@ float4 e1, float4 e2, int chunk, int count ){
     for ( int i = 0; i < chunk; i++){
       rayd = (float4)(dir[3*j*chunk + 3*i], dir[3*j*chunk + 3*i+1], dir[3*j*chunk + 3*i+2], 0);
       rayo = (float4)(o[3*j*chunk + 3*i], o[3*j*chunk +3*i+1], o[3*j*chunk + 3*i+2], 0);
+      #ifdef STAT_RAY_TRIANGLE
+       ++stat_rayTriangle[j*chunk + i];
+      #endif
       s1 = cross(rayd, e2);
       divisor = dot(s1, e1);
       if ( divisor == 0.0) continue;
@@ -64,6 +72,9 @@ float4 e1, float4 e2, int chunk, int count ){
       //if ( j*chunk + i >= count ) continue; //proc se tohle stava?
 
       if (t > tHit[j*chunk + i]) continue;
+      /*#ifdef STAT_RAY_TRIANGLE
+       stat_rayTriangle[j*chunk + i] += 100;
+      #endif*/
         tHit[j*chunk + i] = t;
         index[j*chunk + i] = get_global_id(0);
 
@@ -302,9 +313,20 @@ int computeChild (int count, int chunk, int i){
 __kernel void IntersectionR (
     const __global float* vertex, const __global float* dir, const __global float* o,
     const __global float* cones, const __global float* bounds, __global float* tHit,
-    __global int* index, __global int* stack, int count, int size, int chunk, int height   ) {
+    __global int* index, __global int* stack,
+#ifdef STAT_TRIANGLE_CONE
+ __global int* stat_triangleCone,
+#endif
+#ifdef STAT_RAY_TRIANGLE
+ __global int* stat_rayTriangle,
+#endif
+     int count, int size, int chunk, int height
+) {
     // find position in global arrays
     int iGID = get_global_id(0);
+    #ifdef STAT_TRIANGLE_CONE
+    stat_triangleCone[iGID] = 0;
+    #endif
 
     // bound check (equivalent to the limit on a 'for' loop for standard/serial C code
     if (iGID >= size) return;
@@ -324,30 +346,12 @@ __kernel void IntersectionR (
     e2 = v3 - v1;
 
     //calculate bounding sphere
-    /*float minx, maxx, miny, maxy, minz, maxz;
-    minx = fmin(v1.x,v2.x);
-    minx = fmin(minx,v3.x);//teziste, z vektoru, vzdalenosti max radius
-    maxx = fmax(v1.x,v2.x);
-    maxx = fmax(maxx,v3.x);
-
-    miny = fmin(v1.y,v2.y);
-    miny = fmin(miny,v3.y);
-    maxy = fmax(v1.y,v2.y);
-    maxy = fmax(maxy,v3.y);
-
-    minz = fmin(v1.z,v2.z);
-    minz = fmin(minz,v3.z);
-    maxz = fmax(v1.z,v2.z);
-    maxz = fmax(maxz,v3.z);*/
-
     //vizualizace pruseciku s paprskem a kuzel,trojuhelnikem, ktery se pocitaly
 
     float4 center; float radius;
+    //bounding sphere center - center of mass
     center = (v1+v2+v3)/3;
     radius = length(v1-center);
-    //center = (float4)((maxx-minx)/2 + minx,(maxy-miny)/2 + miny,(maxz-minz)/2 + minz,0);
-    //radius = fmax((maxx-minx)/2,(maxy-miny)/2);
-    //radius = fmax(radius,(maxz-minz)/2);
 
     float4 a,x;
     float fi;
@@ -379,6 +383,9 @@ __kernel void IntersectionR (
       len = length(center-a);
       if ( acos(dot((center-a)/len,x)) - asin(radius/len) < fi)
       {
+        #ifdef STAT_TRIANGLE_CONE
+         ++stat_triangleCone[iGID];
+        #endif
         //store child to the stack
         stack[iGID*height + SPindex++] = begin - 7*lastlevelnum + 14*j;
         while ( SPindex > 0 ){
@@ -391,10 +398,17 @@ __kernel void IntersectionR (
           len = length(center-a);
           if ( len < EPS || acos(dot((center-a)/len,x)) - asin(radius/len) < fi)
           {
+            #ifdef STAT_PICTURE
+             ++stat_triangleCone[iGID];
+            #endif
             child = computeChild (count, chunk, i);
             //if the cones is at level 0 - check leaves
             if ( child < 0)
-              intersectAllLeaves(i/7, dir, o, bounds, index, tHit, v1,v2,v3,e1,e2,chunk,count);
+              intersectAllLeaves(i/7, dir, o, bounds, index, tHit, v1,v2,v3,e1,e2,chunk,count
+              #ifdef STAT_RAY_TRIANGLE
+                , stat_rayTriangle
+              #endif
+              );
             else {
               //save the intersected cone to the stack
               stack[iGID*height + SPindex++] = child;
@@ -405,10 +419,17 @@ __kernel void IntersectionR (
           fi = cones[i+13];
           if ( len < EPS || acos(dot((center-a)/len,x)) - asin(radius/len) < fi)
          {
+            #ifdef STAT_TRIANGLE_CONE
+             ++stat_triangleCone[iGID];
+            #endif
             child = computeChild (count, chunk, i+7);
             //if the cone is at level 0 - check leaves
             if ( child < 0)
-              intersectAllLeaves(i/7+1, dir, o, bounds, index, tHit, v1,v2,v3,e1,e2,chunk,count);
+              intersectAllLeaves(i/7+1, dir, o, bounds, index, tHit, v1,v2,v3,e1,e2,chunk,count
+              #ifdef STAT_RAY_TRIANGLE
+                , stat_rayTriangle
+              #endif
+              );
             else {
               stack[iGID*height + SPindex++] = child;
             }
@@ -418,75 +439,6 @@ __kernel void IntersectionR (
 
     }
 
-   // uint total0 = (count+chunk-1)/chunk;
-
-   /* if ( iGID != 147) return;
-        a = (float4)(cones[7*2868],cones[7*2868+1],cones[7*2868+2],0);
-        x = (float4)(cones[7*2868+3],cones[7*2868+4],cones[7*2868+5],0);
-        fi = cones[7*2359+6];
-        len = length(center-a);
-        tHit[0] = v1.x;
-        tHit[1] = v1.y;
-        tHit[2] = v1.z;
-        tHit[3] = v2.x;
-        tHit[4] = v2.y;
-        tHit[5] = v2.z;
-        tHit[6] = v3.x;
-        tHit[7] = v3.y;
-        tHit[8] = v3.z;
-
-        tHit[9] = center.x;
-        tHit[10] = center.y;
-        tHit[11] = center.z;
-        tHit[12] = radius;
-        tHit[13] = a.x;
-        tHit[14] = a.y;
-        tHit[15] = a.z;
-        tHit[16] = x.x;
-        tHit[17] = x.y;
-        tHit[18] = x.z;
-
-        tHit[19] = dot(normalize(center-a),x);
-        tHit[20] = acos(dot(normalize(center-a),x)) - asin((radius/len));
-
-        //tHit[iGID] = dot(normalize(center-a),x); //acos(dot(normalize(center-a),x)) - asin((radius/len));
-        return;*/
-
-
-  /*  uint num0 = 7*total0;
-    // process throught the cone hieararchy
-    for ( int j = 0; j < (total0+1)/2; j++){
-      // get cone description
-      a = (float4)(cones[num0 + 7*j],cones[num0 + 7*j+1],cones[num0 + 7*j+2],0);
-      x = (float4)(cones[num0 + 7*j+3],cones[num0 + 7*j+4],cones[num0 + 7*j+5],0);
-      fi = cones[num0 + 7*j+6];
-      len = length(center-a);
-      // check if triangle intersects cone
-      if (acos(dot((center-a)/len,x)) - asin(radius/len) < fi)
-        {// check 2 cones
-        a = (float4)(cones[14*j],cones[14*j+1],cones[14*j+2],0);
-        x = (float4)(cones[14*j+3],cones[14*j+4],cones[14*j+5],0);
-        fi = cones[14*j+6];
-        len = length(center-a);
-        if (acos(dot((center-a)/len,x)) - asin(radius/len) < fi)
-       {
-          //process the rays in that cone
-          intersectAllLeaves(2*j, dir, o, bounds, index, tHit, v1,v2,v3,e1,e2,chunk,count);
-        }
-
-        a = (float4)(cones[14*j+7],cones[14*j+8],cones[14*j+9],0);
-        x = (float4)(cones[14*j+10],cones[14*j+11],cones[14*j+12],0);
-        fi = cones[14*j+13];
-        len = length(center-a);
-        if ( acos(dot((center-a)/len,x)) - asin(radius/len) < fi)
-       {
-          //process the rays in that cone
-          intersectAllLeaves(2*j+1, dir, o, bounds, index, tHit, v1,v2,v3,e1,e2,chunk,count);
-        }
-
-      }
-
-    }*/
 
 }
 
@@ -583,36 +535,6 @@ __global unsigned char* tHit, __global int* stack, int count, int size, int chun
       }
 
     }
-
-   /* uint num0 = 7*((count+chunk-1)/(chunk));
-    // process throught the cone hieararchy
-    for ( int j = 0; j < (count+chunk-1)/(chunk*2); j++){
-      // get cone description
-      a = (float4)(cones[num0 + 7*j],cones[num0 + 7*j+1],cones[num0 + 7*j+2],0);
-      x = (float4)(cones[num0 + 7*j+3],cones[num0 + 7*j+4],cones[num0 + 7*j+5],0);
-      fi = cones[num0 + 7*j+6];
-      // check if triangle intersects cone
-      len = length(center-a);
-      //if (acos(dot((center-a)/len,x)) - asin(radius/len) < fi)
-      {        // check 2 cones
-        a = (float4)(cones[14*j],cones[14*j+1],cones[14*j+2],0);
-        x = (float4)(cones[14*j+3],cones[14*j+4],cones[14*j+5],0);
-        fi = cones[14*j+6];
-        len = length(center-a);
-        if ( acos(dot((center-a)/len,x)) - asin(radius/len) < fi)         //process the rays in that cone
-        {
-          intersectPAllLeaves(2*j, dir, o, bounds, tHit, v1,v2,v3,e1,e2,chunk);
-        }
-        a = (float4)(cones[14*j+7],cones[14*j+8],cones[14*j+9],0);
-        x = (float4)(cones[14*j+10],cones[14*j+11],cones[14*j+12],0);
-        len = length(center-a);
-        if ( acos(dot((center-a)/len,x)) - asin(radius/len) < fi)         //process the rays in that cone
-        {
-          intersectPAllLeaves(2*j+1, dir, o, bounds, tHit, v1,v2,v3,e1,e2,chunk);
-        }
-
-      }
-    }*/
 
 
 }
