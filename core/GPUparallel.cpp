@@ -81,6 +81,11 @@ OpenCLQueue::OpenCLQueue(cl_context & context){
       free(devices);
       abort();
   }
+  #ifdef GPU_PROFILE
+      cl_int ciErrNum = clSetCommandQueueProperty(cmd_queue, CL_QUEUE_PROFILING_ENABLE, CL_TRUE, NULL);
+      if (ciErrNum != CL_SUCCESS)
+          Severe(" Error %i in clSetCommandQueueProperty call !!!\n\n", ciErrNum);
+  #endif
   delete [] devices;
   maxtasks = 100;
   numtasks = 0;
@@ -120,10 +125,10 @@ OpenCLTask::OpenCLTask(cl_context & context, cl_command_queue & queue, const cha
 
   ciErrNum = clBuildProgram(cpProgram, 0, NULL,
   #ifdef STAT_TRIANGLE_CONE
-  "-DSTAT_TRIANGLE_CONE -g",
+  "-DSTAT_TRIANGLE_CONE",
   #else
       #ifdef STAT_RAY_TRIANGLE
-      " -DSTAT_RAY_TRIANGLE -g",
+      "-DSTAT_RAY_TRIANGLE",
       #else
       NULL,
       #endif
@@ -302,12 +307,27 @@ bool OpenCLTask::EnqueueReadBuffer(size_t size, size_t it ,void* odata){
   return true;
 }
 
+double executionTime(cl_event &event)
+{
+    cl_ulong start, end;
+
+    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end, NULL);
+    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start, NULL);
+
+    return (double)1.0e-9 * (end - start); // convert nanoseconds to seconds on return
+}
+
 bool OpenCLTask::Run(){
     #ifdef DEBUG_OUTPUT
     cout << "clEnqueueNDRangeKernel...\n";
     #endif
     cl_int ciErrNum;
+    #ifdef GPU_PROFILE
+    cl_event event;
+    ciErrNum = clEnqueueNDRangeKernel(queue, ckKernel, 1, NULL, &szGlobalWorkSize, &szLocalWorkSize, 0, NULL,  &event);
+    #else
     ciErrNum = clEnqueueNDRangeKernel(queue, ckKernel, 1, NULL, &szGlobalWorkSize, &szLocalWorkSize, 0, NULL,  NULL);
+    #endif
     //OpenCL implementace vybere velikost bloku
     //ciErrNum = clEnqueueNDRangeKernel(queue, ckKernel, 1, NULL, &szGlobalWorkSize, NULL, 0, NULL,  NULL);
     if ( ciErrNum != CL_SUCCESS){
@@ -315,6 +335,11 @@ bool OpenCLTask::Run(){
       //cleanup();
       return false;
     }
+    #ifdef GPU_PROFILE
+    clFinish(queue);
+    double ktime = executionTime(event);
+    cout << "Kernel execution time is " << ktime << endl;
+    #endif
     return true;
 }
 
