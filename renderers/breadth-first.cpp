@@ -160,6 +160,8 @@ void breadthFirst::Li(const Scene *scene, const RayDifferential* ray,
   , Ls);
   delete [] hit;
   return;
+  #else
+	  );
   #endif
   for ( int i = 0; i < count; i++)
     Lo[i] = Spectrum(0.f);
