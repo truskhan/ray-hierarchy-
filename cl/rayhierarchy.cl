@@ -313,13 +313,14 @@ int computeChild (int count, int chunk, int i){
 __kernel void IntersectionR (
     const __global float* vertex, const __global float* dir, const __global float* o,
     const __global float* cones, const __global float* bounds, __global float* tHit,
-    __global int* index, __global int* stack,
+    __global int* index,
 #ifdef STAT_TRIANGLE_CONE
  __global int* stat_triangleCone,
 #endif
 #ifdef STAT_RAY_TRIANGLE
  __global int* stat_rayTriangle,
 #endif
+    __local int* stack,
      int count, int size, int chunk, int height
 ) {
     // find position in global arrays

@@ -153,14 +153,10 @@ bool RayHieararchy::Intersect(const Triangle* shape, const Ray &ray, float *tHit
 
 size_t RayHieararchy::ConstructRayHierarchy( cl_uint count, cl_uint chunk, cl_uint * height){
   assert(*height > 0);
-  size_t b = 3;
+
   size_t tn = ocl->CreateTask("../cl/rayhierarchy.cl", PbrtOptions.pbrt_path, "rayhconstruct", "oclRayhconstruct.ptx", (count+chunk-1)/chunk, 64);//zaokrouhleni nahoru
   OpenCLTask* gpuray = ocl->getTask(tn);
 
-  flags[0] = flags[1] = CL_MEM_READ_ONLY;
-  flags[2] = CL_MEM_READ_WRITE;
-  size[1] = sizeof(cl_float)*3*count ; //for ray directions
-  size[2] = sizeof(cl_float)*3*count; //for ray origins
   int total = 0;
   int levelcount = (count+chunk-1)/chunk;
   for ( cl_uint i = 0; i < *height; i++){
@@ -171,17 +167,18 @@ size_t RayHieararchy::ConstructRayHierarchy( cl_uint count, cl_uint chunk, cl_ui
         break;
       }
   }
+  gpuray->InitBuffers(3);
 
-  size[3] = sizeof(cl_float)*7*(total); //for cones - zaokrouhleno nahoru
-  gpuray->InitBuffers(b);
-  if (!gpuray->CreateBuffers(size+1, flags)) exit(EXIT_FAILURE);
-  if (!gpuray->SetIntArgument((cl_uint)chunk)) exit(EXIT_FAILURE);
-  if (!gpuray->SetIntArgument((cl_uint)count)) exit(EXIT_FAILURE);
+  Assert(gpuray->CreateConstantBuffer(0,sizeof(cl_float)*3*count,data[1] )); //ray directions
+  Assert(gpuray->CreateConstantBuffer(1,sizeof(cl_float)*3*count,data[2] )); //ray origins
+  Assert(gpuray->CreateBuffer( 2, sizeof(cl_float)*7*(total), CL_MEM_READ_WRITE)); //for cones
+  //if (!gpuray->CreateBuffers(size+1, flags)) exit(EXIT_FAILURE);
+  Assert(gpuray->SetIntArgument((cl_uint)chunk));
+  Assert(gpuray->SetIntArgument((cl_uint)count));
 
-  //testHierarchy((float*)data[1], (float*)data[2],2,count);
-  flags[2] = CL_MEM_WRITE_ONLY;
-  if (!gpuray->EnqueueWriteBuffer(size+1, flags, (void**)((cl_float**)data+1)))exit(EXIT_FAILURE);
-  if (!gpuray->Run())exit(EXIT_FAILURE);
+  //flags[2] = CL_MEM_WRITE_ONLY;
+  //if (!gpuray->EnqueueWriteBuffer(size+1, flags, (void**)((cl_float**)data+1)))exit(EXIT_FAILURE);
+  Assert(gpuray->Run());
   /*data[6] = new float[7*(total)];
   if (!gpuray->EnqueueReadBuffer(size[3], 2, data[6])) exit(EXIT_FAILURE); //cones
  // testHierarchy1(((float*)data[1]), ((float*)data[2]), ((float*)data[4]), ((float*)data[3]), ((float*)data[0]),
@@ -208,7 +205,7 @@ size_t RayHieararchy::ConstructRayHierarchy( cl_uint count, cl_uint chunk, cl_ui
   }
   ocl->Finish();
 
-  b = 1;
+  size_t b = 1;
   levelcount =  (count+chunk-1)/chunk;
   size_t tasknum = ocl->CreateTask("../cl/rayhierarchy.cl", PbrtOptions.pbrt_path, "rayLevelConstruct", "rayLevelConstruct.ptx", (levelcount+1)/2, 64);
   OpenCLTask* gpurayl = ocl->getTask(tasknum);
@@ -259,7 +256,7 @@ void RayHieararchy::Intersect(const RayDifferential *r, Intersection *in,
     , Spectrum *Ls
     #endif
     )  {
-
+    cout << "count " << count << endl;
     data[1] = new cl_float[count*3]; //ray directions
     data[2] = new cl_float[count*3]; //ray origins
     data[4] = new cl_float[count*2]; //ray bounds
@@ -292,7 +289,7 @@ void RayHieararchy::Intersect(const RayDifferential *r, Intersection *in,
     size_t tn1 = ConstructRayHierarchy(count,chunk,&height);
     OpenCLTask* gpuray = ocl->getTask(tn1);
 
-    size_t b = 8;
+    size_t b = 7;
     #ifdef STAT_TRIANGLE_CONE
      ++b;
     #endif
@@ -315,8 +312,8 @@ void RayHieararchy::Intersect(const RayDifferential *r, Intersection *in,
     flags[6] = CL_MEM_WRITE_ONLY;
     size[5] = sizeof(cl_float)*count; //for Thit
     size[6] = sizeof(cl_uint)*count; //index to shape
-    size[7] = sizeof(cl_int)*triangleCount*height; //stack for every thread
-    b = 7;
+    //size[7] = sizeof(cl_int)*triangleCount*height; //stack for every thread
+    b = 6;
     #ifdef STAT_TRIANGLE_CONE
     size[++b] = sizeof(cl_uint)*triangleCount;
     flags[b] = CL_MEM_WRITE_ONLY;
@@ -327,6 +324,8 @@ void RayHieararchy::Intersect(const RayDifferential *r, Intersection *in,
     #endif
 
     Assert(gput->CreateBuffers( size, flags));
+    //should be workGroupSize instead of 32
+    Assert(gput->SetLocalArgument(sizeof(cl_int)*32*height)); //stack for every thread
     Assert(gput->SetIntArgument((cl_int)count));
     Assert(gput->SetIntArgument((cl_int)triangleCount));
     Assert(gput->SetIntArgument((cl_int)chunk));
@@ -382,9 +381,9 @@ void RayHieararchy::Intersect(const RayDifferential *r, Intersection *in,
     abort();*/
 
 
-    /*cout << endl << "Thit " ;
-    for ( int i = 0; i < 21; i++){
-      cout << (((float*)data[6])[i]) << ' ';
+   /* cout << endl << "Thit " ;
+    for ( int i = 0; i < 768; i++){
+      cout << "i" << i << ": " << (((float*)data[6])[i]) << ' ';
     }
     cout << endl;
     abort();*/
@@ -531,6 +530,7 @@ void RayHieararchy::IntersectP(const Ray* r, unsigned char* occluded, const size
      // for next task store ray bounds as well
   data[4] = new cl_float[count*2]; //ray bounds
   data[5] = occluded;
+  cout << "count " << count << endl;
   for (cl_uint k = 0; k < count; ++k) {
       ((cl_float*)data[1])[3*k] = r[k].d[0];
       ((cl_float*)data[1])[3*k+1] = r[k].d[1];

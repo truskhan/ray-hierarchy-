@@ -29,6 +29,8 @@ class OpenCLTask {
       const char* program, size_t szLWS, size_t szGWS);
     ~OpenCLTask();
     void InitBuffers(size_t count);
+    bool CreateConstantBuffer( size_t i, size_t size, void* data);
+    bool CreateBuffer( size_t i, size_t size, cl_mem_flags flags);
     bool CreateBuffers(size_t* size, cl_mem_flags* flags);
     bool CreateBuffers();
     void CopyBuffers(size_t srcstart, size_t srcend,

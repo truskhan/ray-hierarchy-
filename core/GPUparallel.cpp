@@ -33,8 +33,8 @@ OpenCL::OpenCL(bool onGPU){
             }
 
             platform = platforms[i];
-            if ( !strcmp(pbuf, "NVIDIA Corporation") ||
-             !strcmp(pbuf, "Advanced Micro Devices, Inc."))
+            if ( (onGPU && !strcmp(pbuf, "NVIDIA Corporation")) ||
+            (!onGPU && !strcmp(pbuf, "Advanced Micro Devices, Inc.")))
             {
                 break;
             }
@@ -74,7 +74,11 @@ OpenCLQueue::OpenCLQueue(cl_context & context){
   devices = new cl_device_id[cb];
   clGetContextInfo(context, CL_CONTEXT_DEVICES, cb, devices, NULL);
   // create a command-queue
+  #ifdef GPU_PROFILE
   cmd_queue = clCreateCommandQueue(context, devices[0], CL_QUEUE_PROFILING_ENABLE , NULL); //take first device
+  #else
+  cmd_queue = clCreateCommandQueue(context, devices[0], NULL , NULL);
+  #endif
   if (cmd_queue == (cl_command_queue)0)
   {
       clReleaseContext(context);
@@ -154,6 +158,7 @@ OpenCLTask::OpenCLTask(cl_context & context, cl_command_queue & queue, const cha
 }
 
 void OpenCLTask::InitBuffers(size_t count){
+  argc = 0;
   cmBuffers = new cl_mem[count];
   buffCount = count;
   persistent = new bool[count];
@@ -202,6 +207,59 @@ bool OpenCLTask::CreateBuffers( size_t* size, cl_mem_flags* flags){
       return false;
     }
   }
+  return true;
+}
+
+bool OpenCLTask::CreateBuffer( size_t i, size_t size, cl_mem_flags flags){
+  cl_int ciErrNum;
+  // Allocate the OpenCL buffer memory objects for source and result on the device GMEM
+  if ( !createBuff[i]) return true;
+  #ifdef DEBUG_OUTPUT
+  cout<<"clCreateBuffer " << i << endl;
+  #endif
+  cmBuffers[i] = clCreateBuffer(context, flags, size, NULL, &ciErrNum);
+  if ( ciErrNum != CL_SUCCESS){
+    for ( size_t j = 0; j < buffCount; j++)
+      if ( cmBuffers[j]) clReleaseMemObject(cmBuffers[j]);
+    delete [] cmBuffers;
+    cmBuffers = NULL;
+    Severe("clCreateBuffer failed at buffer number %d", i);
+  }
+
+  ciErrNum = 0;
+  #ifdef DEBUG_OUTPUT
+  cout << "setting argument " << i << endl;
+  #endif
+  ciErrNum = clSetKernelArg(ckKernel, i, sizeof(cl_mem), (void*)&cmBuffers[argc]);
+  ++argc;
+  if (ciErrNum != CL_SUCCESS){
+     cout << "Failed setting " << argc << ". parameter " << ciErrNum <<  endl;
+     return false;
+  }
+
+  return true;
+}
+
+bool OpenCLTask::CreateConstantBuffer( size_t i, size_t size, void* data){
+  cl_int ciErrNum;
+  #ifdef DEBUG_OUTPUT
+  cout<<"clCreateConstantBuffer " << it << endl;
+  #endif
+  cmBuffers[i] = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, size, data, &ciErrNum);
+  if ( ciErrNum != CL_SUCCESS){
+      Severe("clCreateBuffer failed at constant buffer");
+  }
+  ciErrNum = 0;
+  #ifdef DEBUG_OUTPUT
+  cout << "setting argument " << i << endl;
+  #endif
+  ciErrNum = clSetKernelArg(ckKernel, i , sizeof(cl_mem), (void*)&cmBuffers[argc]);
+  if (ciErrNum != CL_SUCCESS){
+    cout << "Failed setting " << i << ". parameter " << ciErrNum <<  endl;
+    return false;
+  }
+  argc++;
+
   return true;
 }
 
