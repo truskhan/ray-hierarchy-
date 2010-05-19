@@ -16,7 +16,7 @@
 void breadthFirstTask::Run() {
     PBRT_STARTED_RENDERTASK(taskNum);
     // Get sub-_Sampler_ for _SamplerRendererTask_
-    Sampler *sampler = mainSampler; //->GetSubSampler(taskNum, taskCount);
+    Sampler *sampler = mainSampler->GetSubSampler(taskNum, taskCount);
     if (!sampler)
     {
         reporter.Update();
@@ -29,26 +29,26 @@ void breadthFirstTask::Run() {
     RNG rng(taskNum);
 
     // Allocate space for samples and intersections
-    int maxSamples = (camera->film->xResolution * camera->film->yResolution);
+    int maxSamples = scene->MaxRaysPerCall(); //(camera->film->xResolution* camera->film->yResolution)
     Sample *samples = origSample->Duplicate(maxSamples);
-
-    RayDifferential *rays = new RayDifferential[maxSamples];
-    Spectrum *Ls = new Spectrum[maxSamples];
-    Spectrum *Ts = new Spectrum[maxSamples];
-    Intersection *isects = new Intersection[maxSamples];
 
     // Get samples from \use{Sampler} and update image
     int sampleCount = 0;
     int counter = 0;
     int temp = 0;
-    // predpokladam jeden sample na pixel, jinak by byla race condition
-    while ((counter != maxSamples) && (temp = sampler->GetMoreSamples(&samples[counter],rng)>0)){
+
+    while ((sampleCount != maxSamples) && (temp = sampler->GetMoreSamples(&samples[counter],rng)>0)){
       ++counter;
       sampleCount += temp; //we just take one sample per pixel, so it could be +1
     }
 
+    RayDifferential *rays = new RayDifferential[sampleCount];
+    Spectrum *Ls = new Spectrum[sampleCount];
+    Spectrum *Ts = new Spectrum[sampleCount];
+    Intersection *isects = new Intersection[sampleCount];
+
     // Generate camera rays
-    float* rayWeight = new float[maxSamples];
+    float* rayWeight = new float[sampleCount];
     for (int i = 0; i < sampleCount; ++i){
         // Find camera ray for _sample[i]_
         PBRT_STARTED_GENERATING_CAMERA_RAY(&samples[i]);
@@ -126,21 +126,17 @@ void breadthFirst::Render(const Scene *scene) {
     // Create and launch _SamplerRendererTask_s for rendering image
 
     // Compute number of _SamplerRendererTask_s to create for rendering
-    //int nPixels = camera->film->xResolution * camera->film->yResolution;
-    //int nTasks = max(32 * NumSystemCores(), nPixels / (16*16));
-    int nTasks = sampler->samplesPerPixel;
+    int nPixels = camera->film->xResolution * camera->film->yResolution;
+    int nTasks = (nPixels*sampler->samplesPerPixel+scene->MaxRaysPerCall()-1)/scene->MaxRaysPerCall();
     nTasks = RoundUpPow2(nTasks);
     ProgressReporter reporter(nTasks, "Rendering");
     vector<Task *> renderTasks;
-    /*for (int i = 0; i < nTasks; ++i)
+    for (int i = 0; i < nTasks; ++i)
         renderTasks.push_back(new breadthFirstTask(scene, this, camera,
                                   reporter,
                                     sampler, sample, nTasks-1-i, nTasks));
     EnqueueTasks(renderTasks);
-    WaitForAllTasks();*/
-    breadthFirstTask(scene, this, camera,
-                                  reporter,
-                                    sampler, sample, nTasks-1, nTasks).Run();
+    WaitForAllTasks();
     for (uint32_t i = 0; i < renderTasks.size(); ++i)
         delete renderTasks[i];
     reporter.Done();

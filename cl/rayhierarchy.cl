@@ -177,7 +177,7 @@ __kernel void rayLevelConstruct(__global float* cones, const int count, const in
   }
   beginr = beginw - temp;
 
-  if ( iGID > levelcount ) return;
+  if ( iGID >= levelcount ) return;
 
   float4 x, r, q, c, a, g, xb, ab,e,n;
   float cosfi, sinfi, cosfib, sinfib;

@@ -7,6 +7,11 @@
 #include "GPUparallel.h"
 #include <iostream>
 
+#define KERNEL_INTERSECTIONR 0
+#define KERNEL_RAYSORT 1
+#define KERNEL_INTERSECTION 2
+#define KERNEL_INTERSECTIONP 3
+#define KERNEL_INTERSECTIONRP 4
 
 using namespace std;
 
@@ -16,7 +21,12 @@ NaiveAccel::NaiveAccel(const vector<Reference<Primitive> > &p, bool rev, bool on
     triangleCount = 0;
     reverse = rev;
     onGPU = onG;
-    ocl = new OpenCL(onGPU);
+    ocl = new OpenCL(onGPU,5);
+    ocl->CompileProgram("../cl/intersection.cl", PbrtOptions.pbrt_path, "IntersectionR", "oclIntersection.ptx", KERNEL_INTERSECTIONR);
+    ocl->CompileProgram ("../cl/raySort.cl", PbrtOptions.pbrt_path, "raySort", "oclraySort.ptx",KERNEL_RAYSORT);
+    ocl->CompileProgram ( "../cl/intersection.cl",PbrtOptions.pbrt_path, "Intersection", "oclIntersection.ptx", KERNEL_INTERSECTION);
+    ocl->CompileProgram ("../cl/intersectionP.cl", PbrtOptions.pbrt_path, "IntersectionP", "oclIntersectionP.ptx", KERNEL_INTERSECTIONP);
+    ocl->CompileProgram ("../cl/intersectionP.cl", PbrtOptions.pbrt_path, "IntersectionRP", "oclIntersectionRP.ptx", KERNEL_INTERSECTIONRP);
     ocl->CreateCmdQueue();
 
     for (uint32_t i = 0; i < p.size(); ++i)
@@ -198,7 +208,7 @@ void NaiveAccel::Intersect(const RayDifferential *r, Intersection *in,
 void NaiveAccel::IntersectRGPU(const RayDifferential *r, Intersection *in,
                                float* rayWeight, bool* hit, int count)  {
 
-    size_t tn = ocl->CreateTask("../cl/intersection.cl", PbrtOptions.pbrt_path, "IntersectionR", "oclIntersection.ptx", triangleCount, 64);
+    size_t tn = ocl->CreateTask(KERNEL_INTERSECTIONR , triangleCount, 64);
     OpenCLTask* gput = ocl->getTask(tn);
     size_t b = 9;
     cl_mem_flags* flags = new cl_mem_flags[b];
@@ -327,7 +337,7 @@ void NaiveAccel::IntersectGPU(const RayDifferential *r, Intersection *in,
         ((float*)bounds)[2*k+1] = INFINITY;
     }
     //cout << endl << endl;
-    size_t tn = ocl->CreateTask ("../cl/raySort.cl", PbrtOptions.pbrt_path, "raySort", "oclraySort.ptx",(count+2)/3,64);
+    size_t tn = ocl->CreateTask (KERNEL_RAYSORT,(count+2)/3,64);
     OpenCLTask* gpusort = ocl->getTask(tn);
     b = 3;
     /*persistent = new bool[b];
@@ -364,7 +374,7 @@ void NaiveAccel::IntersectGPU(const RayDifferential *r, Intersection *in,
     }
     cout << endl << endl;
 
-    tn = ocl->CreateTask ( "../cl/intersection.cl",PbrtOptions.pbrt_path, "Intersection", "oclIntersection.ptx", count, 64);
+    tn = ocl->CreateTask ( KERNEL_INTERSECTION, count, 64);
     OpenCLTask* gput = ocl->getTask(tn);
     b = 9;
     data[3] = bounds;
@@ -492,7 +502,7 @@ bool NaiveAccel::IntersectP(const Ray &ray) const {
 }
 
 void NaiveAccel::IntersectNP(const Ray* r, unsigned char* occluded, const size_t count) {
-    size_t tn = ocl->CreateTask ("../cl/intersectionP.cl", PbrtOptions.pbrt_path, "IntersectionP", "oclIntersectionP.ptx", count, 64);
+    size_t tn = ocl->CreateTask (KERNEL_INTERSECTIONP, count, 64);
     OpenCLTask* gput = ocl->getTask(tn);
     size_t b = 5;
     cl_mem_flags* flags = new cl_mem_flags[b];
@@ -539,7 +549,7 @@ void NaiveAccel::IntersectNP(const Ray* r, unsigned char* occluded, const size_t
 }
 
 void NaiveAccel::IntersectRP(const Ray* r, unsigned char* occluded, const size_t count) {
-    size_t tn = ocl->CreateTask ("../cl/intersectionP.cl", PbrtOptions.pbrt_path, "IntersectionRP", "oclIntersectionRP.ptx", count, 64);
+    size_t tn = ocl->CreateTask (KERNEL_INTERSECTIONRP, count, 64);
     OpenCLTask* gput = ocl->getTask(tn);
     size_t b = 5;
     cl_mem_flags* flags = new cl_mem_flags[b];

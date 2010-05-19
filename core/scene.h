@@ -43,23 +43,8 @@ public:
     #ifdef STAT_RAY_TRIANGLE
     , Spectrum *Ls
     #endif
-    ) const {
-        NaiveAccel* na = dynamic_cast<NaiveAccel*> (aggregate);
-        if ( na != NULL)
-          na->Intersect(ray, isect, rayWeight, hit, count);
-        else {
-          RayHieararchy* rh = dynamic_cast<RayHieararchy*>(aggregate);
-          if ( rh != NULL)
-            rh->Intersect(ray, isect, rayWeight, hit,count
-            #ifdef STAT_RAY_TRIANGLE
-            , Ls
-            #endif
-            );
-          else
-            Severe("Called Intersect with unsoppurted aggregate");
-        }
-
-    }
+    ) const ;
+    unsigned int MaxRaysPerCall() const;
     bool Intersect(const Ray &ray, Intersection *isect) const {
         PBRT_STARTED_RAY_INTERSECTION(const_cast<Ray *>(&ray));
         bool hit = aggregate->Intersect(ray, isect);

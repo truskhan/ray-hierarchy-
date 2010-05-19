@@ -23,9 +23,10 @@ public:
     bool Intersect(const Ray &ray, Intersection *isect) const;
     bool IntersectP(const Ray &ray) const;
     void IntersectP(const Ray* ray, unsigned char* occluded, const size_t count);
+    unsigned int MaxRaysPerCall();
 
 private:
-    size_t ConstructRayHierarchy( cl_uint count, cl_uint chunk, cl_uint * height);
+    size_t ConstructRayHierarchy(cl_float* rayDir, cl_float* rayO, cl_uint count, cl_uint chunk, cl_uint * height, size_t cmd);
     bool Intersect(const Triangle* shape, const Ray &ray, float *tHit,
                   Vector &dpdu, Vector &dpdv, float &tu, float &tv, float uv[3][2],const Point p[3]
                   ,float* coord) const;

@@ -8,10 +8,12 @@
 #include <iostream>
 #include <fstream>
 #include <string.h>
+#include "core/parallel.h"
+#include "core/error.h"
 #include "cl/oclUtils.h"
 #include "cl/shrUtils.h"
 
-
+extern Mutex* omutex;
 class OpenCLTask {
     size_t szLocalWorkSize;		    // # of work items in the 1D work group
     cl_kernel ckKernel;             // OpenCL kernel
@@ -25,8 +27,7 @@ class OpenCLTask {
     cl_command_queue queue;
   public:
     size_t szGlobalWorkSize;        // Total # of work items in the 1D range
-    OpenCLTask(cl_context & context, cl_command_queue & queue, const char* file, const char* path, const char* function,
-      const char* program, size_t szLWS, size_t szGWS);
+    OpenCLTask(cl_context & context, cl_command_queue & queue, cl_kernel & kernel, size_t szLWS, size_t szGWS);
     ~OpenCLTask();
     void InitBuffers(size_t count);
     bool CreateConstantBuffer( size_t i, size_t size, void* data);
@@ -51,23 +52,22 @@ class OpenCLQueue {
    OpenCLTask** tasks;
    size_t numtasks;
    size_t maxtasks;
-   //vector<OpenCLTask *> tasks;
+
    public:
     OpenCLQueue( cl_context & context);
     ~OpenCLQueue(){
-      for ( size_t i = 0; i < numtasks; i++){
+      /*for ( size_t i = 0; i < numtasks; i++){
         if ( tasks[i] != NULL) delete tasks[i];
       }
-      if ( tasks != NULL) delete [] tasks;
+      if ( tasks != NULL) delete [] tasks;*/
       clReleaseCommandQueue(cmd_queue);
     }
-    size_t CreateTask(cl_context & context, const char* file, const char* path, const char* function, const char* program,
-    size_t szLWS, size_t szGWS){
+    size_t CreateTask(cl_context & context, cl_kernel & kernel, size_t szLWS, size_t szGWS){
       if ( numtasks > maxtasks) {
         std::cout << "exceeded maxtasks " << std::endl;
         abort();
       }
-      tasks[numtasks++] = (new OpenCLTask(context, cmd_queue, file,path,function,program, szLWS, szGWS));
+      tasks[numtasks++] = (new OpenCLTask(context, cmd_queue, kernel, szLWS, szGWS));
       return numtasks-1;
     }
     OpenCLTask* getTask(size_t i = 0){
@@ -88,26 +88,57 @@ class OpenCLQueue {
 
 class OpenCL {
   static cl_context cxContext; //OpenCL context
-  vector<OpenCLQueue *> queue;
+  OpenCLQueue** queue;
+  cl_kernel* kernels;
+  size_t numKernels;
+  size_t numqueues;
+  size_t maxqueues;
   public:
-    OpenCL(bool onGPU);
+    OpenCL(bool onGPU, size_t numKernels);
     ~OpenCL(){
-      for ( vector<OpenCLQueue *>::iterator it = queue.begin(); it != queue.end(); it++)
-        delete (*it);
+        for ( size_t i = 0; i < numqueues; i++)
+            delete queue[i];
+        delete [] queue;
       clReleaseContext(cxContext);
+      for ( size_t i = 0; i < numKernels; i++)
+        if(kernels[i])clReleaseKernel(kernels[i]);
+      delete [] kernels;
     }
-    void CreateCmdQueue(){  queue.push_back(new OpenCLQueue(cxContext)); }
-    size_t CreateTask(const char* file, const char* path, const char* function, const char* program,
-      size_t count, size_t szLWS, size_t szGWS = 0, size_t i = 0){
-        return queue[i]->CreateTask(cxContext, file,path,function,program, szLWS, shrRoundUp((int)szLWS, count));
+    void CompileProgram(const char* file, const char* path, const char* function,
+      const char* program, size_t i);
+    size_t CreateCmdQueue(){
+        MutexLock lock(*omutex);
+        queue[numqueues++] = new OpenCLQueue(cxContext);
+        Info("Created Cmd Queue %d.", numqueues-1);
+        return numqueues-1;
+    }
+    void DeleteCmdQueue(size_t i){
+        MutexLock lock(*omutex);
+        if ( queue[i] != NULL){
+            delete queue[i];
+            queue[i] = NULL;
+        }
+        while ( numqueues > 0 && queue[numqueues-1] == NULL)
+        --numqueues;
+
+        Info("Deleted Cmd Queue %d.", i);
+    }
+    size_t CreateTask(size_t kernel, size_t count, size_t szLWS, size_t i = 0, size_t szGWS = 0){
+        MutexLock lock(*omutex);
+        size_t task = queue[i]->CreateTask(cxContext, kernels[kernel], szLWS, shrRoundUp((int)szLWS, count));
+        Info("Created Task %d in queue %d.",task, i);
+        return task;
     }
     OpenCLTask* getTask(size_t task = 0, size_t i = 0){
       return queue[i]->getTask(task);
     }
     void delTask(size_t task = 0, size_t i = 0){
+      MutexLock lock(*omutex);
       queue[i]->delTask(task);
+      Info("Deleted %d Task in queue %d.",task,i);
     }
     void Finish(size_t i = 0){
+      MutexLock lock(*omutex);
       queue[i]->Finish();
     }
 
