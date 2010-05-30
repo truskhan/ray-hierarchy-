@@ -81,7 +81,7 @@ void breadthFirstTask::Run() {
         sampler->yPixelStart, sampler->xPixelEnd+1, sampler->yPixelEnd+1);
     //use of global sampler, don't delete it, it will be done by ~breadthFirst
     //delete sampler;
-    delete[] samples;
+    //delete[] samples;
     delete[] rays;
     delete[] Ls;
     delete[] Ts;

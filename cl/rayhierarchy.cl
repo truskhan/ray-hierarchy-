@@ -162,7 +162,6 @@ __kernel void computeDpTuTv (const __global float* vertex, const __global float*
 }
 
 __kernel void rayLevelConstruct(__global float* cones, const int count, const int chunk, const int level){
-
   int iGID = get_global_id(0);
 
   int beginr = 0;
@@ -237,7 +236,6 @@ __kernel void rayLevelConstruct(__global float* cones, const int count, const in
 
 __kernel void rayhconstruct(const __global float* dir,const  __global float* o,
  __global float* cones, const int chunk, const int count){
-
   int iGID = get_global_id(0);
   int total = (count+chunk-1)/chunk;
   if (iGID >= total) return;
@@ -245,7 +243,7 @@ __kernel void rayhconstruct(const __global float* dir,const  __global float* o,
   float4 x, r, q, xnew, c, p , a, e, n , g, xb, ab, rb, test;
   float cosfi, sinfi, cosfib, sinfib;
   float dotrx, dotcx, t ;
-
+  if ( iGID >= count) return; //should not happend
   //start with the zero angle enclosing cone of the first ray
   x = normalize((float4)(dir[3*iGID*chunk],dir[3*iGID*chunk+1],dir[3*iGID*chunk+2],0));
   a = (float4)(o[3*iGID*chunk],o[3*iGID*chunk+1], o[3*iGID*chunk+2],0);
@@ -325,12 +323,14 @@ __kernel void IntersectionR (
 ) {
     // find position in global arrays
     int iGID = get_global_id(0);
+    int iLID = get_local_id(0);
     #ifdef STAT_TRIANGLE_CONE
     stat_triangleCone[iGID] = 0;
     #endif
 
     // bound check (equivalent to the limit on a 'for' loop for standard/serial C code
     if (iGID >= size) return;
+
     /*for ( int i = iGID; i < count; i+=size ){
       index[i] = 0; //initialize the array
     }*/
@@ -388,11 +388,11 @@ __kernel void IntersectionR (
          ++stat_triangleCone[iGID];
         #endif
         //store child to the stack
-        stack[iGID*height + SPindex++] = begin - 7*lastlevelnum + 14*j;
+        stack[iLID*(height) + SPindex++] = begin - 7*lastlevelnum + 14*j;
         while ( SPindex > 0 ){
           //take the cones from the stack and check them
           --SPindex;
-          i = stack[iGID*height + SPindex];
+          i = stack[iLID*(height) + SPindex];
           a = (float4)(cones[i],cones[i+1],cones[i+2],0);
           x = (float4)(cones[i+3],cones[i+4],cones[i+5],0);
           fi = cones[i+6];
@@ -412,7 +412,7 @@ __kernel void IntersectionR (
               );
             else {
               //save the intersected cone to the stack
-              stack[iGID*height + SPindex++] = child;
+              stack[iLID*(height) + SPindex++] = child;
             }
           }
           a = (float4)(cones[i+7],cones[i+8],cones[i+9],0);
@@ -432,7 +432,7 @@ __kernel void IntersectionR (
               #endif
               );
             else {
-              stack[iGID*height + SPindex++] = child;
+              stack[iLID*(height) + SPindex++] = child;
             }
           }
         }
@@ -448,9 +448,10 @@ __kernel void IntersectionR (
 __kernel void IntersectionP (
 const __global float* vertex, const __global float* dir, const __global float* o,
  const __global float* cones, const __global float* bounds,
-__global unsigned char* tHit, __global int* stack, int count, int size, int chunk, int height)
+__global unsigned char* tHit, __local int* stack, int count, int size, int chunk, int height)
 {
     int iGID = get_global_id(0);
+    int iLID = get_local_id(0);
     if (iGID >= size) return;
 
     // process all geometry
@@ -499,11 +500,11 @@ __global unsigned char* tHit, __global int* stack, int count, int size, int chun
       if ( acos(dot((center-a)/len,x)) - asin(radius/len) < fi)
       {
         //store child to the stack
-        stack[iGID*height + SPindex++] = begin - 7*lastlevelnum + 14*j;
+        stack[iLID*height + SPindex++] = begin - 7*lastlevelnum + 14*j;
         while ( SPindex > 0 ){
           //take the cones from the stack and check them
           --SPindex;
-          i = stack[iGID*height + SPindex];
+          i = stack[iLID*height + SPindex];
           a = (float4)(cones[i],cones[i+1],cones[i+2],0);
           x = (float4)(cones[i+3],cones[i+4],cones[i+5],0);
           fi = cones[i+6];
@@ -516,7 +517,7 @@ __global unsigned char* tHit, __global int* stack, int count, int size, int chun
               intersectPAllLeaves(i/7, dir, o, bounds, tHit, v1,v2,v3,e1,e2,chunk);
             else {
               //save the intersected cone to the stack
-              stack[iGID*height + SPindex++] = child;
+              stack[iLID*height + SPindex++] = child;
             }
           }
           a = (float4)(cones[i+7],cones[i+8],cones[i+9],0);
@@ -529,7 +530,7 @@ __global unsigned char* tHit, __global int* stack, int count, int size, int chun
             if ( child < 0)
               intersectPAllLeaves(i/7+1, dir, o, bounds, tHit, v1,v2,v3,e1,e2,chunk);
             else {
-              stack[iGID*height + SPindex++] = child;
+              stack[iLID*height + SPindex++] = child;
             }
           }
         }

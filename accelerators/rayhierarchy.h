@@ -35,9 +35,6 @@ private:
     vector<Reference<Primitive> > primitives;
     BBox bbox;
     size_t triangleCount;
-    void* data[20];
-    size_t size[20];
-    cl_mem_flags flags[20];
     cl_float* vertices; cl_float* uvs;
     bool onGPU;
     cl_uint height;

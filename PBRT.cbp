@@ -41,6 +41,8 @@
 		<Unit filename="cl/intersectionP.cl" />
 		<Unit filename="cl/raySort.cl" />
 		<Unit filename="cl/rayhierarchy.cl" />
+		<Unit filename="cl/shrUtils.cpp" />
+		<Unit filename="cl/shrUtils.h" />
 		<Unit filename="core/GPUparallel.cpp" />
 		<Unit filename="core/GPUparallel.h" />
 		<Unit filename="core/api.cpp" />
