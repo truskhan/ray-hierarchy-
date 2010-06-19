@@ -193,9 +193,9 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories=".;core;win32;win32\IlmImf;win32\half;win32\iex;win32\IlmThread;win32\Imath;win32\zlib;&quot;win32\glew-1.5.4\include&quot;;win32\OpenCL\NVIDIA\include"
-				PreprocessorDefinitions="PBRT_POINTER_SIZE=4;PBRT_STATS_NONE;WIN32;_CRT_SECURE_NO_WARNINGS;PBRT_HAS_OPENEXR"
+				PreprocessorDefinitions="PBRT_POINTER_SIZE=4;PBRT_STATS_NONE;WIN32;_CRT_SECURE_NO_WARNINGS"
 				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
+				BasicRuntimeChecks="0"
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -212,9 +212,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				UseLibraryDependencyInputs="false"
 				AdditionalDependencies="opencl.lib IlmImf.lib half.lib Iex.lib IlmThread.lib Imath.lib zlib.lib glew32.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="win32\OpenCL\NVIDIA\lib;win32\lib;&quot;win32\glew-1.5.4\lib&quot;"
+				AddModuleNamesToAssembly=""
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -1225,10 +1227,6 @@
 			</File>
 			<File
 				RelativePath="core\pbrt.h"
-				>
-			</File>
-			<File
-				RelativePath="core\pbrtparse.hpp"
 				>
 			</File>
 			<File
