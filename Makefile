@@ -5,7 +5,7 @@ ARCH = $(shell uname)
 EXRINCLUDE=-I/usr/local/include/OpenEXR -I/usr/include/OpenEXR
 EXRLIBDIR=-L/usr/local/lib
 DEFS_DEFAULT= -DPBRT_HAS_PTHREADS -DPBRT_HAS_OPENEXR  #-DPBRT_STATS_NONE -DPBRT_HAS_PTHREADS -DPBRT_HAS_OPENEXR
-DEFS=$(DEFS_DEFAULT) -DGPU_PROFILE -DPBRT_STATS_COUNTERS -DDEBUG_OUTPUT -DDEBUG #-DSTAT_RAY_TRIANGLE
+DEFS=$(DEFS_DEFAULT) -DPBRT_STATS_COUNTERS -DDEBUG_OUTPUT #-DGPU_PROFILE -DDEBUG -DSTAT_RAY_TRIANGLE
 
 # 32 bit
 DEFS+=-DPBRT_POINTER_SIZE=4
@@ -52,7 +52,8 @@ LIBS=$(LEXLIB) $(EXRLIBDIR) $(EXRLIBS) -lm $(OPENCLLIBS)
 LIBSRCS=$(wildcard core/*.cpp) core/pbrtlex.cpp core/pbrtparse.cpp
 LIBSRCS += $(wildcard accelerators/*.cpp cameras/*.cpp film/*.cpp filters/*.cpp )
 LIBSRCS += $(wildcard integrators/*.cpp lights/*.cpp materials/*.cpp renderers/*.cpp )
-LIBSRCS += $(wildcard samplers/*.cpp shapes/*.cpp textures/*.cpp volumes/*.cpp cl/*.cpp )
+LIBSRCS += $(wildcard samplers/*.cpp shapes/*.cpp textures/*.cpp volumes/*.cpp )
+LIBSRCS += $(cl/oclUtils.cpp cl/shrUtils.cpp cl/stopwatch.cpp cl/stopwatch_linux.cpp)
 
 #LIBOBJS=$(addprefix objs/, $(notdir $(LIBSRCS:.cpp=.o)))
 LIBOBJS=$(addprefix objs/, $(subst /,_,$(LIBSRCS:.cpp=.o)))

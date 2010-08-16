@@ -81,7 +81,6 @@ OpenCL::OpenCL(bool onGPU, size_t numKernels){
 
   cpPrograms = new cl_program[numKernels];
   functions = new const char*[numKernels];
-
 }
 
 OpenCLQueue::OpenCLQueue(cl_context & context){
@@ -114,6 +113,7 @@ OpenCLQueue::OpenCLQueue(cl_context & context){
   tasks = new OpenCLTask*[maxtasks];
   for ( unsigned int i = 0; i < maxtasks; i++)
     tasks[i] = 0;
+  globalmutex = Mutex::Create();
 }
 
 void OpenCL::CompileProgram(const char* file, const char* path, const char* function,
@@ -170,7 +170,7 @@ void OpenCL::CompileProgram(const char* file, const char* path, const char* func
 
 }
 
-OpenCLTask::OpenCLTask(cl_context & context, cl_command_queue & queue, cl_program & cpProgram,
+OpenCLTask::OpenCLTask(cl_context & context, cl_command_queue & queue, Mutex* gm, cl_program & cpProgram,
  const char* function, size_t szLWS, size_t szGWS){
   this->context = context;
   this->queue = queue;
@@ -184,6 +184,12 @@ OpenCLTask::OpenCLTask(cl_context & context, cl_command_queue & queue, cl_progra
     Severe("Invalid kerel, errNum: %d ", ciErrNum);
   }
 
+  #define EVENTS 20
+  writeEvents = new cl_event[EVENTS];
+  readEvents = new cl_event[EVENTS/2];
+  writeENum = readENum = 0;
+
+  globalmutex = gm;
 }
 
 void OpenCLTask::InitBuffers(size_t count){
@@ -200,6 +206,7 @@ void OpenCLTask::InitBuffers(size_t count){
 
 void OpenCLTask::CopyBuffers(size_t srcstart, size_t srcend, size_t dststart, OpenCLTask* oclt){
   size_t j = dststart;
+
   for ( size_t i = srcstart; i < srcend; i++){
     cmBuffers[j] = oclt->cmBuffers[i];
     createBuff[j] = false;
@@ -209,6 +216,7 @@ void OpenCLTask::CopyBuffers(size_t srcstart, size_t srcend, size_t dststart, Op
 
 bool OpenCLTask::CreateBuffers( size_t* size, cl_mem_flags* flags){
   cl_int ciErrNum;
+  MutexLock lock(*globalmutex);
   for ( size_t it = 0; it < buffCount; it++){
     // Allocate the OpenCL buffer memory objects for source and result on the device GMEM
     if ( !createBuff[it]) continue;
@@ -241,6 +249,7 @@ bool OpenCLTask::CreateBuffers( size_t* size, cl_mem_flags* flags){
 
 bool OpenCLTask::CreateBuffer( size_t i, size_t size, cl_mem_flags flags){
   cl_int ciErrNum;
+  MutexLock lock(*globalmutex);
   // Allocate the OpenCL buffer memory objects for source and result on the device GMEM
   if ( !createBuff[i]) return true;
   #ifdef DEBUG_OUTPUT
@@ -271,6 +280,7 @@ bool OpenCLTask::CreateBuffer( size_t i, size_t size, cl_mem_flags flags){
 
 bool OpenCLTask::CreateConstantBuffer( size_t i, size_t size, void* data){
   cl_int ciErrNum;
+  MutexLock lock(*globalmutex);
   #ifdef DEBUG_OUTPUT
   cout<<"clCreateConstantBuffer " << i << endl;
   #endif
@@ -296,6 +306,7 @@ bool OpenCLTask::CreateBuffers( ){
   //all buffers copied from previous task, so just set them as an argument
   cl_int ciErrNum;
   ciErrNum = 0;
+  MutexLock lock(*globalmutex);
   for ( argc = 0; argc < buffCount; ++argc){
     #ifdef DEBUG_OUTPUT
     cout << "setting argument " << argc << endl;
@@ -313,6 +324,7 @@ bool OpenCLTask::SetIntArgument(const cl_int & arg){
   #ifdef DEBUG_OUTPUT
   cout << "set int argument " << argc << endl;
   #endif
+
   cl_int ciErrNum;
   ciErrNum = clSetKernelArg(ckKernel, argc++, sizeof(cl_int), (void*)&arg);
   if (ciErrNum != CL_SUCCESS){
@@ -328,6 +340,7 @@ bool OpenCLTask::SetIntArgument(const cl_int & arg, const int & i){
   cout << "set int argument " << endl;
   #endif
   cl_int ciErrNum;
+
   ciErrNum = clSetKernelArg(ckKernel, i, sizeof(cl_int), (void*)&arg);
   if (ciErrNum != CL_SUCCESS){
     cout << "Failed setting parameters " << ciErrNum <<  endl;
@@ -342,6 +355,7 @@ bool OpenCLTask::SetLocalArgument(const size_t & size){
   cout << "set local argument " << endl;
   #endif
   cl_int ciErrNum;
+
   ciErrNum = clSetKernelArg(ckKernel, argc++, size, 0);
   if (ciErrNum != CL_SUCCESS){
     cout << "Failed setting local parameters " << ciErrNum <<  endl;
@@ -354,17 +368,28 @@ bool OpenCLTask::SetLocalArgument(const size_t & size){
 bool OpenCLTask::EnqueueWriteBuffer(size_t* sizes,cl_mem_flags* flags,void** data){
   size_t it = 0;
   cl_int ciErrNum;
+  MutexLock lock(*globalmutex);
   while ( it < buffCount ){
     if ( !createBuff[it] || flags[it] == CL_MEM_WRITE_ONLY) {
       ++it;
       continue;
     }
-    ciErrNum = clEnqueueWriteBuffer(queue, cmBuffers[it], CL_FALSE, 0, sizes[it] , data[it], 0, NULL, NULL);
+    ciErrNum = clEnqueueWriteBuffer(queue, cmBuffers[it], CL_FALSE, 0, sizes[it] , data[it], 0, NULL, &writeEvents[writeENum++]);
+    //probably useless test, if it is asynchronous?
     if ( ciErrNum != CL_SUCCESS){
       cout << "Failed " << ciErrNum << " asynchronous data transfer at buffer "<< it << endl;
       //cleanup();
       return false;
     }
+    #ifdef DEBUG
+    Info("Waiting on clFinish - EnqueueWriteBuffer %d", it);
+    ciErrNum = clFinish(queue);
+    if ( ciErrNum != CL_SUCCESS){
+      cout << "failed data transfer at buffer " << it << " error: " << ciErrNum << endl;
+      //cleanup();
+      return false;
+    }
+    #endif
     ++it;
   }
   return true;
@@ -372,18 +397,31 @@ bool OpenCLTask::EnqueueWriteBuffer(size_t* sizes,cl_mem_flags* flags,void** dat
 
 bool OpenCLTask::EnqueueWriteBuffer(size_t size, size_t it, void* data){
   cl_int ciErrNum;
-  ciErrNum = clEnqueueWriteBuffer(queue, cmBuffers[it], CL_FALSE, 0, size , data, 0, NULL, NULL);
+  Info("Before lock");
+  MutexLock lock(*globalmutex);
+  Info("After lock");
+  ciErrNum = clEnqueueWriteBuffer(queue, cmBuffers[it], CL_FALSE, 0, size , data, 0, NULL, &writeEvents[writeENum++]);
   if ( ciErrNum != CL_SUCCESS){
     cout << "Failed " << ciErrNum << " asynchronous data transfer at buffer "<< it << endl;
     //cleanup();
     return false;
   }
+  #ifdef DEBUG
+  Info("Waiting on clFinish - EnqueueWriteBuffer");
+  ciErrNum = clFinish(queue);
+  if ( ciErrNum != CL_SUCCESS){
+    Severe("failed data transfer %d", ciErrNum) ;
+    //cleanup();
+    return false;
+  }
+  #endif
   return true;
 }
 
 bool OpenCLTask::EnqueueReadBuffer(size_t size, size_t it ,void* odata){
   cl_int ciErrNum;
-  ciErrNum = clEnqueueReadBuffer(queue, cmBuffers[it], CL_TRUE, 0, size , odata, 0, NULL, NULL);
+  MutexLock lock(*globalmutex);
+  ciErrNum = clEnqueueReadBuffer(queue, cmBuffers[it], CL_TRUE, 0, size , odata, 1, &kernelEvent, &writeEvents[writeENum++]);
   if ( ciErrNum != CL_SUCCESS){
     cout << "failed read " << it << " buffer " << ciErrNum << endl;
     //cleanup();
@@ -407,24 +445,25 @@ bool OpenCLTask::Run(){
     #ifdef DEBUG_OUTPUT
     cout << "clEnqueueNDRangeKernel...\n";
     #endif
+    Info("Waiting on %d write events",writeENum);
+    MutexLock lock(*globalmutex);
     cl_int ciErrNum;
-    #ifdef GPU_PROFILE
-    cl_event event;
-    ciErrNum = clEnqueueNDRangeKernel(queue, ckKernel, 1, NULL, &szGlobalWorkSize, &szLocalWorkSize, 0, NULL,  &event);
-    #else
-    ciErrNum = clEnqueueNDRangeKernel(queue, ckKernel, 1, NULL, &szGlobalWorkSize, &szLocalWorkSize, 0, NULL,  NULL);
-    #endif
+
+    ciErrNum = clEnqueueNDRangeKernel(queue, ckKernel, 1, NULL, &szGlobalWorkSize, &szLocalWorkSize, writeENum, (writeENum == 0)?0:writeEvents,  &kernelEvent);
     //OpenCL implementace vybere velikost bloku
     //ciErrNum = clEnqueueNDRangeKernel(queue, ckKernel, 1, NULL, &szGlobalWorkSize, NULL, 0, NULL,  NULL);
     if ( ciErrNum != CL_SUCCESS){
-      cout << "failed enqueue kernel " << ciErrNum << endl;
-      //cleanup();
-      return false;
+      Severe("failed enqueue kernel %d", ciErrNum);
     }
     #ifdef GPU_PROFILE
-    clFinish(queue);
-    double ktime = executionTime(event);
-    cout << "Kernel execution time is " << ktime << endl;
+    Info("Waiting on clFinish - clEnqueueNDRangeKernel");
+    ciErrNum = clFinish(queue);
+    if ( ciErrNum != CL_SUCCESS){
+      Severe("failed running kernel %d",ciErrNum);
+    }
+    double ktime = executionTime(kernelEvent);
+    Info("Kernel execution time is %f.9", ktime);
+    //clReleaseEvent(kernelEvent);
     #endif
     return true;
 }
@@ -435,6 +474,7 @@ bool OpenCLTask::EnqueueReadBuffer(size_t* sizes,cl_mem_flags* flags,void** data
   #endif
   cl_int ciErrNum;
   size_t it = 0;
+  MutexLock lock(*globalmutex);
   while ( it < buffCount){
     if ( flags[it] == CL_MEM_READ_ONLY){
       it++;
@@ -443,7 +483,7 @@ bool OpenCLTask::EnqueueReadBuffer(size_t* sizes,cl_mem_flags* flags,void** data
     #ifdef DEBUG_OUTPUT
     cout << "Reading buffer " <<endl;
     #endif
-    ciErrNum = clEnqueueReadBuffer(queue, cmBuffers[it], CL_TRUE, 0, sizes[it], data[it], 0, NULL,  NULL);
+    ciErrNum = clEnqueueReadBuffer(queue, cmBuffers[it], CL_FALSE, 0, sizes[it], data[it], 1, &kernelEvent,  &readEvents[readENum++]);
     if ( ciErrNum != CL_SUCCESS){
       cout << "failed read " << it << " buffer " << ciErrNum << endl;
       //cleanup();
@@ -456,18 +496,22 @@ bool OpenCLTask::EnqueueReadBuffer(size_t* sizes,cl_mem_flags* flags,void** data
 }
 
 OpenCLTask::~OpenCLTask(){
-
-  //if(ckKernel)clReleaseKernel(ckKernel);
-  //if(ceEvent)clReleaseEvent(ceEvent);
-  //if(cpProgram)clReleaseProgram(cpProgram);
   clReleaseKernel(ckKernel);
   if (cmBuffers){
     for ( size_t i = 0; i < buffCount; i++){
        clReleaseMemObject(cmBuffers[i]);
     }
     if (cmBuffers) delete [] cmBuffers;
+    if (createBuff) delete [] createBuff;
     if (persistent) delete [] persistent;
     cmBuffers = NULL;
   }
+  for ( size_t i = 0; i < writeENum; i++)
+    clReleaseEvent(writeEvents[i]);
+  delete [] writeEvents;
+  for ( size_t i = 0; i < readENum; i++)
+    clReleaseEvent(readEvents[i]);
+  delete [] readEvents;
+  clReleaseEvent(kernelEvent);
 }
 

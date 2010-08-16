@@ -60,6 +60,7 @@ unsigned int Scene::MaxRaysPerCall() const {
         return rh->MaxRaysPerCall();
     else
       Severe("Called MaxRaysPerCall with unsoppurted aggregate");
+    return 0;
 }
 
 void Scene::Intersect(const RayDifferential* ray, Intersection *isect, bool* hit, float* rayWeight,int & count

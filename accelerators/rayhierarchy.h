@@ -39,7 +39,8 @@ private:
     bool onGPU;
     cl_uint height;
     cl_uint chunk;
-    OpenCL* ocl;
+    OpenCL* ocl; //pointer to OpenCL auxiliary functions
+    size_t cmd; //index to command queue
 };
 
 

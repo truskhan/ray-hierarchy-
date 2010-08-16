@@ -35,10 +35,16 @@ class OpenCLTask {
     cl_context context;
     /// reference to the OpenCL command queue
     cl_command_queue queue;
+    cl_uint writeENum;
+    cl_uint readENum;
+    cl_event* writeEvents;
+    cl_event kernelEvent;
+    cl_event* readEvents;
+    Mutex* globalmutex;
   public:
     /// Total # of work items in the 1D range
     size_t szGlobalWorkSize;
-    OpenCLTask(cl_context & context, cl_command_queue & queue, cl_program & cpProgram,
+    OpenCLTask(cl_context & context, cl_command_queue & queue, Mutex* gm, cl_program & cpProgram,
     const char* function, size_t szLWS, size_t szGWS);
     ~OpenCLTask();
     void InitBuffers(size_t count);
@@ -62,6 +68,12 @@ class OpenCLTask {
     bool EnqueueReadBuffer(size_t* sizes,cl_mem_flags* flags,void** odata);
     bool EnqueueReadBuffer(size_t size, size_t it, void* odata);
     bool Run();
+    void WaitForKernel(){
+      clWaitForEvents(1, &kernelEvent);
+    }
+    void WaitForRead(){
+      clWaitForEvents(readENum, readEvents);
+    }
 };
 
 /** Class for holding OpenCL queue **/
@@ -73,7 +85,7 @@ class OpenCLQueue {
    ///auxiliary variables for resizing and monitoring tasks array size
    size_t numtasks;
    size_t maxtasks;
-
+   Mutex* globalmutex;
    public:
    /**Creation of OpenCL queue
    param[in] context needs for all OpenCL API calls
@@ -90,24 +102,26 @@ class OpenCLQueue {
     \see OpenCL:CreateTask() for detail description of parameters
     **/
     size_t CreateTask(cl_context & context, cl_program & program, const char* func, size_t szLWS, size_t szGWS){
+      MutexLock lock(*globalmutex);
       if ( numtasks == maxtasks) {
         std::cout << "exceeded maxtasks " << std::endl;
-        OpenCLTask** temp = new OpenCLTask*[2/3*maxtasks];
+        OpenCLTask** temp = new OpenCLTask*[2*maxtasks];
         for ( unsigned int i = 0; i < maxtasks; i++)
             temp[i] = tasks[i];
-        for ( unsigned int i = maxtasks; i < 2/3*maxtasks; i++)
+        for ( unsigned int i = maxtasks; i < 2*maxtasks; i++)
             temp[i] = 0;
        delete [] tasks;
        tasks = temp;
-       maxtasks *= 2/3;
+       maxtasks *= 2;
       }
-      tasks[numtasks++] = (new OpenCLTask(context, cmd_queue, program, func , szLWS, szGWS));
+      tasks[numtasks++] = (new OpenCLTask(context, cmd_queue, globalmutex, program, func , szLWS, szGWS));
       return numtasks-1;
     }
     OpenCLTask* getTask(size_t i = 0){
        return tasks[i];
     }
     void delTask(size_t i = 0){
+      MutexLock lock(*globalmutex);
       if ( tasks[i] != NULL){
         delete tasks[i];
         tasks[i] = NULL;
@@ -148,14 +162,15 @@ class OpenCL {
     Release consumpted sources (clPrograms, queues, context)
     **/
     ~OpenCL(){
-        for ( size_t i = 0; i < numqueues; i++)
-            delete queue[i];
-        delete [] queue;
-      clReleaseContext(cxContext);
       for ( size_t i = 0; i < numKernels; i++)
         if (cpPrograms[i]) clReleaseProgram(cpPrograms[i]);
       delete [] cpPrograms;
       delete [] functions;
+      for ( size_t i = 0; i < numqueues; i++)
+        delete queue[i];
+      delete [] queue;
+      clReleaseContext(cxContext);
+      Info("Released OpenCL context");
       Mutex::Destroy(mutex);
     }
     /** Compiles program from give file and function name, if it is unsuccesfull, it aborts the entire program
@@ -172,7 +187,7 @@ class OpenCL {
     @return returns index to queues array, so that user can query for concrete queue
     **/
     size_t CreateCmdQueue(){
-        MutexLock lock(*mutex);
+
         if ( numqueues == maxqueues) {
             OpenCLQueue** temp = new OpenCLQueue*[2/3*maxqueues];
             for ( unsigned int i = 0; i < maxqueues; i++)
@@ -191,7 +206,7 @@ class OpenCL {
     Deletes command queue
     **/
     void DeleteCmdQueue(size_t i){
-        MutexLock lock(*mutex);
+
         Info("Started Deletion of cmd queue %d.", i);
         if ( queue[i] != NULL){
             delete queue[i];
