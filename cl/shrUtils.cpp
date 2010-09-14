@@ -1855,6 +1855,7 @@ unsigned char* shrLoadRawFile(const char* filename, size_t size)
 // Round Up Division function
 size_t shrRoundUp(int group_size, int global_size)
 {
+    if (group_size == 0) return 0;
     int r = global_size % group_size;
     if(r == 0)
     {

@@ -1,4 +1,4 @@
-
+//TODO: refactor the code and try tu run it!
 // accelerators/Naive.cpp*
 #include "accelerators/naive.h"
 #include "probes.h"
@@ -228,8 +228,8 @@ void NaiveAccel::IntersectRGPU(const RayDifferential *r, Intersection *in,
     gput->InitBuffers(b);
     if (!gput->CreateBuffers(size, flags)) exit(EXIT_FAILURE);
     flags[8] = CL_MEM_WRITE_ONLY;
-    if (!gput->SetIntArgument(count)) exit(EXIT_FAILURE);
-    if (!gput->SetIntArgument((int&)triangleCount)) exit(EXIT_FAILURE);
+    if (!gput->SetIntArgument(9, count)) exit(EXIT_FAILURE);
+    if (!gput->SetIntArgument(10,(int&)triangleCount)) exit(EXIT_FAILURE);
 
     data[1] = new cl_float[count*3]; //ray directions
     data[2] = new cl_float[count*3]; //ray origins
@@ -254,13 +254,13 @@ void NaiveAccel::IntersectRGPU(const RayDifferential *r, Intersection *in,
     }
 
 
-    if (!gput->EnqueueWriteBuffer(size, flags, (void**)data))exit(EXIT_FAILURE);
-    if (!gput->EnqueueWriteBuffer(size[8], 8 , data[8])) exit(EXIT_FAILURE);
+    if (!gput->EnqueueWriteBuffer( flags, (void**)data))exit(EXIT_FAILURE);
+    if (!gput->EnqueueWriteBuffer( 8 , data[8])) exit(EXIT_FAILURE);
     if (!gput->Run())exit(EXIT_FAILURE);
     data[6] = new float[2*count];
     data[7] = new float[2*3*count];
-    if (!gput->EnqueueReadBuffer(size, flags, (void**)data))exit(EXIT_FAILURE);
-    if (!gput->EnqueueReadBuffer(size[8], 8, data[8] ))exit(EXIT_FAILURE);
+    if (!gput->EnqueueReadBuffer( flags, (void**)data))exit(EXIT_FAILURE);
+    if (!gput->EnqueueReadBuffer( 8, data[8] ))exit(EXIT_FAILURE);
     int index;
 
     Vector dpdu, dpdv;
@@ -340,26 +340,21 @@ void NaiveAccel::IntersectGPU(const RayDifferential *r, Intersection *in,
     size_t tn = ocl->CreateTask (KERNEL_RAYSORT,(count+2)/3,64);
     OpenCLTask* gpusort = ocl->getTask(tn);
     b = 3;
-    /*persistent = new bool[b];
-    createBuff = new bool[b];
-    persistent[0] = persistent[1] = true;
-    createBuff[0] = createBuff[1] = true;
-    gpusort.persistent = persistent;
-    gpusort.createBuff = createBuff;*/
+
     flags = new cl_mem_flags[b];
     flags[0] = flags[1] = flags[2] = CL_MEM_READ_WRITE;
     gpusort->InitBuffers(b);
     if (!gpusort->CreateBuffers(size+1, flags)) exit(EXIT_FAILURE);
-    if (!gpusort->SetIntArgument(count)) exit(EXIT_FAILURE);
-    if (!gpusort->SetIntArgument(0)) exit(EXIT_FAILURE);
+    if (!gpusort->SetIntArgument(4,count)) exit(EXIT_FAILURE);
+    if (!gpusort->SetIntArgument(5,0)) exit(EXIT_FAILURE);
     flags[2] = CL_MEM_WRITE_ONLY; //indices created in the kernel
-    if (!gpusort->EnqueueWriteBuffer(size+1, flags, (void**)((float**)data+1)))exit(EXIT_FAILURE);
+    if (!gpusort->EnqueueWriteBuffer( flags, (void**)((float**)data+1)))exit(EXIT_FAILURE);
     for ( int j = 0; j < 1; j++){
         if (!gpusort->SetIntArgument(j,4)) exit(EXIT_FAILURE);
         if (!gpusort->Run())exit(EXIT_FAILURE);
         ocl->Finish();
     }
-    if (!gpusort->EnqueueReadBuffer(size+1, flags, (void**)((float**)data+1)))exit(EXIT_FAILURE);
+    if (!gpusort->EnqueueReadBuffer( flags, (void**)((float**)data+1)))exit(EXIT_FAILURE);
 
     /*for (int k = 0; k < count; ++k) {
         cout << "ray" << k << ((float*)data[1])[3*k]
@@ -403,16 +398,16 @@ void NaiveAccel::IntersectGPU(const RayDifferential *r, Intersection *in,
     if (!gput->CreateBuffers(size, flags)) exit(EXIT_FAILURE);
     //gput.cmBuffers[1] = gpusort.cmBuffers[0];
     //gput.cmBuffers[2] = gpusort.cmBuffers[1];
-    if (!gput->SetIntArgument(count)) exit(EXIT_FAILURE);
-    if (!gput->SetIntArgument((int&)triangleCount)) exit(EXIT_FAILURE);
+    if (!gput->SetIntArgument(9,count)) exit(EXIT_FAILURE);
+    if (!gput->SetIntArgument(10,(int&)triangleCount)) exit(EXIT_FAILURE);
 
-    if (!gput->EnqueueWriteBuffer(size, flags, (void**)data))exit(EXIT_FAILURE);
+    if (!gput->EnqueueWriteBuffer(flags, (void**)data))exit(EXIT_FAILURE);
     if (!gput->Run())exit(EXIT_FAILURE);
     data[5] = new float[gput->szGlobalWorkSize];
     data[6] = new float[2*gput->szGlobalWorkSize];
     data[7] = new float[2*3*gput->szGlobalWorkSize];
     data[8] = new int[gput->szGlobalWorkSize];
-    if (!gput->EnqueueReadBuffer(size, flags, (void**)data))exit(EXIT_FAILURE);
+    if (!gput->EnqueueReadBuffer(flags, (void**)data))exit(EXIT_FAILURE);
     int index;
 
     float* tempThit = new float[gput->szGlobalWorkSize];
@@ -517,8 +512,8 @@ void NaiveAccel::IntersectNP(const Ray* r, unsigned char* occluded, const size_t
 
     gput->InitBuffers(b);
     if (!gput->CreateBuffers(size, flags)) exit(EXIT_FAILURE);
-    if (!gput->SetIntArgument((int&)count)) exit(EXIT_FAILURE);
-    if (!gput->SetIntArgument((int&)triangleCount)) exit(EXIT_FAILURE);
+    if (!gput->SetIntArgument(5,(int&)count)) exit(EXIT_FAILURE);
+    if (!gput->SetIntArgument(6,(int&)triangleCount)) exit(EXIT_FAILURE);
 
     data[1] = new cl_float[count*3]; //ray directions
     data[2] = new cl_float[count*3]; //ray origins
@@ -537,9 +532,9 @@ void NaiveAccel::IntersectNP(const Ray* r, unsigned char* occluded, const size_t
     }
 
     data[4] = occluded;
-    if (!gput->EnqueueWriteBuffer(size, flags, (void**)data))exit(EXIT_FAILURE);
+    if (!gput->EnqueueWriteBuffer( flags, (void**)data))exit(EXIT_FAILURE);
     if (!gput->Run())exit(EXIT_FAILURE);
-    if (!gput->EnqueueReadBuffer(size, flags, (void**)data))exit(EXIT_FAILURE);
+    if (!gput->EnqueueReadBuffer( flags, (void**)data))exit(EXIT_FAILURE);
 
 
     delete [] ((float*)data[1]);
@@ -563,8 +558,8 @@ void NaiveAccel::IntersectRP(const Ray* r, unsigned char* occluded, const size_t
     size[4] = sizeof(cl_uchar)*count; //for Thit
     gput->InitBuffers(b);
     if (!gput->CreateBuffers(size, flags)) exit(EXIT_FAILURE);
-    if (!gput->SetIntArgument((int&)count)) exit(EXIT_FAILURE);
-    if (!gput->SetIntArgument((int&)triangleCount)) exit(EXIT_FAILURE);
+    if (!gput->SetIntArgument(5,(int&)count)) exit(EXIT_FAILURE);
+    if (!gput->SetIntArgument(6,(int&)triangleCount)) exit(EXIT_FAILURE);
 
     data[1] = new cl_float[count*3]; //ray directions
     data[2] = new cl_float[count*3]; //ray origins
@@ -585,9 +580,9 @@ void NaiveAccel::IntersectRP(const Ray* r, unsigned char* occluded, const size_t
         ((unsigned char*)data[4])[k] = '0';
     }
 
-    if (!gput->EnqueueWriteBuffer(size, flags, (void**)data))exit(EXIT_FAILURE);
+    if (!gput->EnqueueWriteBuffer( flags, (void**)data))exit(EXIT_FAILURE);
     if (!gput->Run())exit(EXIT_FAILURE);
-    if (!gput->EnqueueReadBuffer(size, flags, (void**)data))exit(EXIT_FAILURE);
+    if (!gput->EnqueueReadBuffer(flags, (void**)data))exit(EXIT_FAILURE);
 
 
     delete [] ((float*)data[1]);

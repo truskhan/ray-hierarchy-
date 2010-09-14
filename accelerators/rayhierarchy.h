@@ -15,7 +15,8 @@ public:
     RayHieararchy(const vector<Reference<Primitive> > &p,bool onG, int chunk, int height);
     bool CanIntersect() const { return true; }
     ~RayHieararchy();
-    void Intersect(const RayDifferential *r, Intersection *in, float* rayWeight, bool* hit, int counter
+    void Intersect(const RayDifferential *r, Intersection *in, float* rayWeight, bool* hit, unsigned int count,
+    const unsigned int & xResolution, const unsigned int & yResolution
     #ifdef STAT_RAY_TRIANGLE
     , Spectrum *Ls
     #endif
@@ -26,7 +27,8 @@ public:
     unsigned int MaxRaysPerCall();
 
 private:
-    size_t ConstructRayHierarchy(cl_float* rayDir, cl_float* rayO, cl_uint count, cl_uint chunk, cl_uint * height, size_t cmd);
+    size_t ConstructRayHierarchy(cl_float* rayDir, cl_float* rayO, cl_uint count,
+    cl_uint* countArray, unsigned int threadsCount);
     bool Intersect(const Triangle* shape, const Ray &ray, float *tHit,
                   Vector &dpdu, Vector &dpdv, float &tu, float &tv, float uv[3][2],const Point p[3]
                   ,float* coord) const;
@@ -41,6 +43,10 @@ private:
     cl_uint chunk;
     OpenCL* ocl; //pointer to OpenCL auxiliary functions
     size_t cmd; //index to command queue
+    unsigned a,b, global_a,global_b;
+    cl_uint threadsCount;
+    unsigned int rest_x, rest_y;
+    mutable unsigned int xResolution;
 };
 
 

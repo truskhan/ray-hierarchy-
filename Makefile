@@ -21,8 +21,9 @@ LEX=flex
 YACC=bison -d -v -t
 LEXLIB = -lfl
 
-OPENCLINCLUDE=-I$(HOME)/ati-stream-sdk-v2.01-lnx32/include
-OPENCLLIBS=-L$(HOME)/ati-stream-sdk-v2.01-lnx32/lib/x86 -lOpenCL
+ATISTREAMSDKROOT=/home/hanci/ati-stream-sdk-v2.2-lnx32/
+OPENCLINCLUDE=-I$(ATISTREAMSDKROOT)include
+OPENCLLIBS=-L$(ATISTREAMSDKROOT)lib/x86 -lOpenCL
 
 #OPENCLINCLUDE=-I$(HOME)/NVIDIA_GPU_Computing_SDK/sdk/shared/inc -I$(HOME)/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc
 #OPENCLLIBS=-L$(HOME)/NVIDIA_GPU_Computing_SDK/OpenCL/common/lib -L$(HOME)/NVIDIA_GPU_Computing_SDK/sdk/shared/lib -L$(HOME)/NVIDIA_GPU_Computing_SDK/OpenCL/common/lib -L/home/hanci/NVIDIA_GPU_Computing_SDK/shared/lib -loclUtil -lOpenCL  -lshrutil
@@ -53,9 +54,8 @@ LIBSRCS=$(wildcard core/*.cpp) core/pbrtlex.cpp core/pbrtparse.cpp
 LIBSRCS += $(wildcard accelerators/*.cpp cameras/*.cpp film/*.cpp filters/*.cpp )
 LIBSRCS += $(wildcard integrators/*.cpp lights/*.cpp materials/*.cpp renderers/*.cpp )
 LIBSRCS += $(wildcard samplers/*.cpp shapes/*.cpp textures/*.cpp volumes/*.cpp )
-LIBSRCS += $(cl/oclUtils.cpp cl/shrUtils.cpp cl/stopwatch.cpp cl/stopwatch_linux.cpp)
+LIBSRCS += $(wildcard cl/cmd_arg_reader.cpp cl/oclUtils.cpp cl/shrUtils.cpp cl/stopwatch.cpp cl/stopwatch_linux.cpp)
 
-#LIBOBJS=$(addprefix objs/, $(notdir $(LIBSRCS:.cpp=.o)))
 LIBOBJS=$(addprefix objs/, $(subst /,_,$(LIBSRCS:.cpp=.o)))
 
 HEADERS = $(wildcard */*.h)

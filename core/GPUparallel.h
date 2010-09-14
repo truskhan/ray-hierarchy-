@@ -21,8 +21,6 @@ class OpenCLTask {
     size_t szLocalWorkSize;
     /// OpenCL kernel
     cl_kernel ckKernel;
-    /// # of kernel arguments
-    size_t argc;
     /// array of memory buffers
     cl_mem* cmBuffers;
     /// total number of buffer count
@@ -31,6 +29,8 @@ class OpenCLTask {
     bool* persistent;
     /// indicates which memory buffer should be created and which should be copied
     bool* createBuff;
+    /// size of buffers
+    size_t *sizeBuff;
     /// reference to the OpenCL context
     cl_context context;
     /// reference to the OpenCL command queue
@@ -56,17 +56,15 @@ class OpenCLTask {
     **/
     bool CreateBuffer( size_t i, size_t size, cl_mem_flags flags);
     bool CreateBuffers(size_t* size, cl_mem_flags* flags);
-    bool CreateBuffers();
-    void CopyBuffers(size_t srcstart, size_t srcend,
-    size_t dststart, OpenCLTask* oclt);
+    void CopyBuffer(size_t src, size_t dst, OpenCLTask* oclt);
+    void CopyBuffers(size_t srcstart, size_t srcend, size_t dststart, OpenCLTask* oclt);
     int SetPersistentBuff( size_t i ) { return clRetainMemObject(cmBuffers[i]);}
-    bool SetIntArgument(const cl_int & arg);
-    bool SetIntArgument(const cl_int & arg, const int & i);
-    bool SetLocalArgument(const size_t & size);
-    bool EnqueueWriteBuffer(size_t* sizes,cl_mem_flags* flags,void** data);
-    bool EnqueueWriteBuffer(size_t size, size_t it, void* data);
-    bool EnqueueReadBuffer(size_t* sizes,cl_mem_flags* flags,void** odata);
-    bool EnqueueReadBuffer(size_t size, size_t it, void* odata);
+    bool SetIntArgument(const size_t & it, const cl_int & arg);
+    bool SetLocalArgument(const size_t & it, const size_t & size);
+    bool EnqueueWriteBuffer(cl_mem_flags* flags,void** data);
+    bool EnqueueWriteBuffer(size_t it, void* data);
+    bool EnqueueReadBuffer(cl_mem_flags* flags,void** odata);
+    bool EnqueueReadBuffer( size_t it, void* odata);
     bool Run();
     void WaitForKernel(){
       clWaitForEvents(1, &kernelEvent);
@@ -221,11 +219,11 @@ class OpenCL {
     Creates new OpenCL Task which is simply a one kernel
     @param[in] kernel index to cpPrograms and functions which kernel to make
     @param[in] count total number of tasks
-    @param[in] szLWS number of work-itmes in a block
     @param[in] i index to command queues
+    @param[in] szLWS number of work-itmes in a block
     @param[in] szGWS global number of work-items, should be multiple of szLWS
     **/
-    size_t CreateTask(size_t kernel, size_t count, size_t szLWS, size_t i = 0, size_t szGWS = 0){
+    size_t CreateTask(size_t kernel, size_t count, size_t i = 0, size_t szLWS = 0, size_t szGWS = 0){
         size_t task = queue[i]->CreateTask(cxContext, cpPrograms[kernel], functions[kernel], szLWS, shrRoundUp((int)szLWS, count));
         Info("Created Task %d in queue %d.",task, i);
         return task;

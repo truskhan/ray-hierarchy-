@@ -39,7 +39,8 @@ public:
     // Scene Public Methods
     Scene(Primitive *accel, const vector<Light *> &lts, VolumeRegion *vr);
     ~Scene();
-    void Intersect(const RayDifferential* ray, Intersection *isect, bool* hit, float* rayWeight,int & count
+    void Intersect(const RayDifferential* ray, Intersection *isect, bool* hit, float* rayWeight,int & count,
+    const unsigned int & xRes, const unsigned int & yRes
     #ifdef STAT_RAY_TRIANGLE
     , Spectrum *Ls
     #endif

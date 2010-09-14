@@ -1,82 +1,77 @@
 #pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
-#define EPS 0.000002
+#define EPS 0.000002f
 
-void intersectPAllLeaves (int j, const __global float* dir, const __global float* o, const __global float* bounds,
-__global unsigned char* tHit, float4 v1, float4 v2, float4 v3, float4 e1, float4 e2, int chunk
+void intersectPAllLeaves (const __global float* dir, const __global float* o, const __global float* bounds,
+__global unsigned char* tHit, float3 v1, float3 v2, float3 v3, float3 e1, float3 e2, int chunk, int rindex
 ){
-    float4 s1, s2, d, rayd, rayo;
+    float3 s1, s2, d, rayd, rayo;
     float divisor, invDivisor, t, b1, b2;
     // process all rays in the cone
     for ( int i = 0; i < chunk; i++){
-      rayd = (float4)(dir[3*j*chunk + 3*i], dir[3*j*chunk + 3*i+1], dir[3*j*chunk + 3*i+2], 0);
-      rayo = (float4)(o[3*j*chunk + 3*i], o[3*j*chunk +3*i+1], o[3*j*chunk + 3*i+2], 0);
+      rayd = (float3)(dir[3*rindex + 3*i], dir[3*rindex + 3*i+1], dir[3*rindex + 3*i+2]);
+      rayo = (float3)(o[3*rindex + 3*i], o[3*rindex +3*i+1], o[3*rindex + 3*i+2]);
       s1 = cross(rayd, e2);
       divisor = dot(s1, e1);
-      if ( divisor == 0.0) continue;
+      if ( divisor == 0.0f) continue;
       invDivisor = 1.0f/ divisor;
 
       // compute first barycentric coordinate
       d = rayo - v1;
       b1 = dot(d, s1) * invDivisor;
-      if ( b1 < -1e-3f  || b1 > 1.+1e-3f) continue;
+      if ( b1 < -1e-3f  || b1 > 1+1e-3f) continue;
 
       // compute second barycentric coordinate
       s2 = cross(d, e1);
       b2 = dot(rayd, s2) * invDivisor;
-      if ( b2 < -1e-3f || (b1 + b2) > 1.+1e-3f) continue;
+      if ( b2 < -1e-3f || (b1 + b2) > 1+1e-3f) continue;
 
       // Compute _t_ to intersection point
       t = dot(e2, s2) * invDivisor;
-      if (t < bounds[2*j*chunk + i*2]) continue;
+      if (t < bounds[2*rindex + i*2]) continue;
 
-      //if (tHit[j*chunk+i] != INFINITY && tHit[j*chunk + i] != NAN && t > tHit[j*chunk + i]) continue;
-      tHit[j*chunk+i] = '1';
+      tHit[rindex+i] = '1';
     }
 }
 
-void intersectAllLeaves (int j, const __global float* dir, const __global float* o,
-const __global float* bounds, __global int* index, __global float* tHit, float4 v1, float4 v2, float4 v3,
-float4 e1, float4 e2, int chunk, int count
+void intersectAllLeaves (const __global float* dir, const __global float* o,
+const __global float* bounds, __global int* index, __global float* tHit, float3 v1, float3 v2, float3 v3,
+float3 e1, float3 e2, int chunk, int rindex
 #ifdef STAT_RAY_TRIANGLE
 , __global int* stat_rayTriangle
 #endif
  ){
-    float4 s1, s2, d, rayd, rayo;
+    float3 s1, s2, d, rayd, rayo;
     float divisor, invDivisor, t, b1, b2;
     // process all rays in the cone
 
     for ( int i = 0; i < chunk; i++){
-      rayd = (float4)(dir[3*j*chunk + 3*i], dir[3*j*chunk + 3*i+1], dir[3*j*chunk + 3*i+2], 0);
-      rayo = (float4)(o[3*j*chunk + 3*i], o[3*j*chunk +3*i+1], o[3*j*chunk + 3*i+2], 0);
+      rayd = (float3)(dir[3*rindex + 3*i], dir[3*rindex + 3*i+1], dir[3*rindex + 3*i+2]);
+      rayo = (float3)(o[3*rindex + 3*i], o[3*rindex +3*i+1], o[3*rindex + 3*i+2]);
       #ifdef STAT_RAY_TRIANGLE
-       ++stat_rayTriangle[j*chunk + i];
+       ++stat_rayTriangle[rindex + i];
       #endif
       s1 = cross(rayd, e2);
       divisor = dot(s1, e1);
-      if ( divisor == 0.0) continue;
+      if ( divisor == 0.0f) continue;
       invDivisor = 1.0f/ divisor;
 
       // compute first barycentric coordinate
       d = rayo - v1;
       b1 = dot(d, s1) * invDivisor;
-      if ( b1 < -1e-3f  || b1 > 1.+1e-3f) continue;
+      if ( b1 < -1e-3f  || b1 > 1+1e-3f) continue;
 
       // compute second barycentric coordinate
       s2 = cross(d, e1);
       b2 = dot(rayd, s2) * invDivisor;
-      if ( b2 < -1e-3f || (b1 + b2) > 1.+1e-3f) continue;
+      if ( b2 < -1e-3f || (b1 + b2) > 1+1e-3f) continue;
 
       // Compute _t_ to intersection point
       t = dot(e2, s2) * invDivisor;
-      if (t < bounds[2*j*chunk + i*2]) continue;
-      //if ( j*chunk + i >= count ) continue; //proc se tohle stava?
+      if (t < bounds[2*rindex + i*2]) continue;
 
-      if (t > tHit[j*chunk + i]) continue;
-      /*#ifdef STAT_RAY_TRIANGLE
-       stat_rayTriangle[j*chunk + i] += 100;
-      #endif*/
-        tHit[j*chunk + i] = t;
-        index[j*chunk + i] = get_global_id(0);
+      if (t > tHit[rindex + i]) continue;
+        tHit[rindex + i] = t;
+        index[rindex + i] = get_global_id(0);
 
 
     }
@@ -92,41 +87,41 @@ __kernel void computeDpTuTv (const __global float* vertex, const __global float*
     int i = index[iGID];
     if ( i == 0 ) return;
 
-    float4 rayd,rayo, v1, v2, v3, e1, e2;
+    float3 rayd,rayo, v1, v2, v3, e1, e2;
     float b1,b2,invDivisor;
 
-    rayd = (float4)(dir[3*iGID], dir[3*iGID+1], dir[3*iGID+2], 0);
-    rayo = (float4)(o[3*iGID], o[3*iGID+1], o[3*iGID+2], 0);
+    rayd = (float3)(dir[3*iGID], dir[3*iGID+1], dir[3*iGID+2]);
+    rayo = (float3)(o[3*iGID], o[3*iGID+1], o[3*iGID+2]);
 
-    v1 = (float4)(vertex[9*i], vertex[9*i+1], vertex[9*i+2], 0);
-    v2 = (float4)(vertex[9*i + 3], vertex[9*i + 4], vertex[9*i + 5], 0);
-    v3 = (float4)(vertex[9*i + 6], vertex[9*i + 7], vertex[9*i + 8], 0);
+    v1 = (float3)(vertex[9*i], vertex[9*i+1], vertex[9*i+2]);
+    v2 = (float3)(vertex[9*i + 3], vertex[9*i + 4], vertex[9*i + 5]);
+    v3 = (float3)(vertex[9*i + 6], vertex[9*i + 7], vertex[9*i + 8]);
     e1 = v2 - v1;
     e2 = v3 - v1;
 
-    float4 s1 = cross(rayd, e2);
+    float3 s1 = cross(rayd, e2);
     float divisor = dot(s1, e1);
     invDivisor = 1.0f/ divisor;
 
    // compute first barycentric coordinate
-    float4 d = rayo - v1;
+    float3 d = rayo - v1;
     b1 = dot(d, s1) * invDivisor;
 
     // compute second barycentric coordinate
-    float4 s2 = cross(d, e1);
+    float3 s2 = cross(d, e1);
     b2 = dot(rayd, s2) * invDivisor;
 
     float du1 = uvs[6*i]   - uvs[6*i+4];
     float du2 = uvs[6*i+2] - uvs[6*i+4];
     float dv1 = uvs[6*i+1] - uvs[6*i+5];
     float dv2 = uvs[6*i+3] - uvs[6*i+5];
-    float4 dp1 = v1 - v3;
-    float4 dp2 = v2 - v3;
+    float3 dp1 = v1 - v3;
+    float3 dp2 = v2 - v3;
 
     float determinant = du1 * dv2 - dv1 * du2;
 
     if ( determinant == 0.f ) {
-      float4 temp = normalize(cross(e2, e1));
+      float3 temp = normalize(cross(e2, e1));
       if ( fabs(temp.x) > fabs(temp.y)) {
           float invLen = rsqrt(temp.x*temp.x + temp.z*temp.z);
           dp[6*iGID] = -temp.z*invLen;
@@ -138,13 +133,13 @@ __kernel void computeDpTuTv (const __global float* vertex, const __global float*
           dp[6*iGID+1] = temp.z*invLen;
           dp[6*iGID+2] = -temp.y*invLen;
       }
-      float4 help = cross(temp, (float4)(dp[6*iGID], dp[6*iGID+1], dp[6*iGID+2],0));
+      float3 help = cross(temp, (float3)(dp[6*iGID], dp[6*iGID+1], dp[6*iGID+2]));
       dp[6*iGID+3] = help.x;
       dp[6*iGID+4] = help.y;
       dp[6*iGID+5] = help.z;
     } else {
       float invdet = 1.f / determinant;
-      float4 help = (dv2 * dp1 - dv1 * dp2) * invdet;
+      float3 help = (dv2 * dp1 - dv1 * dp2) * invdet;
 
       dp[6*iGID] = help.x;
       dp[6*iGID+1] = help.y;
@@ -161,12 +156,13 @@ __kernel void computeDpTuTv (const __global float* vertex, const __global float*
 
 }
 
-__kernel void rayLevelConstruct(__global float* cones, const int count, const int chunk, const int level){
+__kernel void levelConstruct(__global float* cones, const int count,
+  const int threadsCount, const int level){
   int iGID = get_global_id(0);
 
   int beginr = 0;
   int beginw = 0;
-  int levelcount = (count+chunk-1)/chunk; //end of level0
+  int levelcount = threadsCount; //end of level0
   int temp;
 
   for ( int i = 0; i < level; i++){
@@ -178,20 +174,22 @@ __kernel void rayLevelConstruct(__global float* cones, const int count, const in
 
   if ( iGID >= levelcount ) return;
 
-  float4 x, r, q, c, a, g, xb, ab,e,n;
-  float cosfi, sinfi, cosfib, sinfib;
+  float3 x, q, c, a, g, xb, ab,e,n;
+  float cosfi, sinfi, cosfib;
   float dotrx, dotcx, t ;
   float fi,fib;
 
-  x = (float4)(cones[7*beginr + 14*iGID+3],cones[7*beginr + 14*iGID+4],cones[7*beginr + 14*iGID+5],0);
-  a = (float4)(cones[7*beginr + 14*iGID],cones[7*beginr + 14*iGID+1],cones[7*beginr + 14*iGID+2],0);
-  fi = cones[7*beginr + 14*iGID+6];
+  x = (float3)(cones[8*beginr + 16*iGID+3],cones[8*beginr + 16*iGID+4],cones[8*beginr + 16*iGID+5]);
+  a = (float3)(cones[8*beginr + 16*iGID],cones[8*beginr + 16*iGID+1],cones[8*beginr + 16*iGID+2]);
+  fi = cones[8*beginr + 16*iGID+6];
   cosfi = native_cos(fi);
-  if ( iGID != levelcount ) {
+  cones[8*beginw + 8*iGID + 7] = 1;
+  if ( !( iGID == (levelcount - 1) && temp % 2 == 1 )) {
     //posledni vlakno jen prekopiruje
-    ab = (float4)(cones[7*beginr + 14*iGID+7],cones[7*beginr + 14*iGID+8],cones[7*beginr + 14*iGID+9],0);
-    xb = (float4)(cones[7*beginr + 14*iGID+10],cones[7*beginr + 14*iGID+11],cones[7*beginr + 14*iGID+12],0);
-    fib = cones[7*beginr + 14*iGID+13];
+    cones[8*beginw + 8*iGID + 7] = 2;
+    ab = (float3)(cones[8*beginr + 16*iGID+8],cones[8*beginr + 16*iGID+9],cones[8*beginr + 16*iGID+10]);
+    xb = (float3)(cones[8*beginr + 16*iGID+11],cones[8*beginr + 16*iGID+12],cones[8*beginr + 16*iGID+13]);
+    fib = cones[8*beginr + 16*iGID+13];
     cosfib = native_cos(fib);
 
     //average direction
@@ -224,35 +222,37 @@ __kernel void rayLevelConstruct(__global float* cones, const int count, const in
       }
     }
   }
-    cones[7*beginw + 7*iGID]     = a.x;
-    cones[7*beginw + 7*iGID + 1] = a.y;
-    cones[7*beginw + 7*iGID + 2] = a.z;
-    cones[7*beginw + 7*iGID + 3] = x.x;
-    cones[7*beginw + 7*iGID + 4] = x.y;
-    cones[7*beginw + 7*iGID + 5] = x.z;
-    cones[7*beginw + 7*iGID + 6] = fi;
-
+    cones[8*beginw + 8*iGID]     = a.x;
+    cones[8*beginw + 8*iGID + 1] = a.y;
+    cones[8*beginw + 8*iGID + 2] = a.z;
+    cones[8*beginw + 8*iGID + 3] = x.x;
+    cones[8*beginw + 8*iGID + 4] = x.y;
+    cones[8*beginw + 8*iGID + 5] = x.z;
+    cones[8*beginw + 8*iGID + 6] = fi;
 }
 
 __kernel void rayhconstruct(const __global float* dir,const  __global float* o,
- __global float* cones, const int chunk, const int count){
+  const __global unsigned int* counts, __global float* cones, const int count){
   int iGID = get_global_id(0);
-  int total = (count+chunk-1)/chunk;
-  if (iGID >= total) return;
+  if (iGID >= count ) return;
 
-  float4 x, r, q, xnew, c, p , a, e, n , g, xb, ab, rb, test;
-  float cosfi, sinfi, cosfib, sinfib;
+  float3 x, r, q, c, p , a, e, n , g;
+  float cosfi, sinfi;
   float dotrx, dotcx, t ;
-  if ( iGID >= count) return; //should not happend
+
+  unsigned int index = 0;
+  for ( int i = 0; i < iGID; i++)
+    index += counts[i];
+
   //start with the zero angle enclosing cone of the first ray
-  x = normalize((float4)(dir[3*iGID*chunk],dir[3*iGID*chunk+1],dir[3*iGID*chunk+2],0));
-  a = (float4)(o[3*iGID*chunk],o[3*iGID*chunk+1], o[3*iGID*chunk+2],0);
+  x = normalize((float3)(dir[3*index],dir[3*index+1],dir[3*index+2]));
+  a = (float3)(o[3*index],o[3*index+1], o[3*index+2]);
   cosfi = 1;
 
-  for ( int i = 1; i < chunk && iGID*chunk+i < count; i++){
+  for ( int i = 1; i < counts[iGID]; i++){
     //check if the direction of the ray lies within the solid angle
-    r = normalize((float4)(dir[3*(iGID*chunk+i)], dir[3*(iGID*chunk+i)+1],dir[3*(iGID*chunk+i)+2],0));
-    p = (float4)(o[3*(iGID*chunk+i)], o[3*(iGID*chunk+i)+1], o[3*(iGID*chunk+i)+2],0);
+    r = normalize((float3)(dir[3*(index+i)], dir[3*(index+i)+1],dir[3*(index+i)+2]));
+    p = (float3)(o[3*(index+i)], o[3*(index+i)+1], o[3*(index+i)+2]);
     dotrx = dot(r,x);
     if ( dotrx < cosfi ){
       //extend the cone
@@ -280,32 +280,41 @@ __kernel void rayhconstruct(const __global float* dir,const  __global float* o,
   }
 
   //store the result
-  cones[7*iGID]   = a.x;
-  cones[7*iGID+1] = a.y;
-  cones[7*iGID+2] = a.z;
-  cones[7*iGID+3] = x.x;
-  cones[7*iGID+4] = x.y;
-  cones[7*iGID+5] = x.z;
-  cones[7*iGID+6] = (cosfi > (1-EPS)) ? 0.003: acos(cosfi); //precision problems
+  cones[8*iGID]   = a.x;
+  cones[8*iGID+1] = a.y;
+  cones[8*iGID+2] = a.z;
+  cones[8*iGID+3] = x.x;
+  cones[8*iGID+4] = x.y;
+  cones[8*iGID+5] = x.z;
+  cones[8*iGID+6] = (cosfi > (1-EPS)) ? 0.003f: acos(cosfi); //precision problems
+  cones[8*iGID+7] = counts[iGID];
 
 }
 
-int computeChild (int count, int chunk, int i){
+int computeChild (unsigned int threadsCount, int i){
   int index = 0;
-  int levelcount = (count+chunk-1)/chunk;
+  int levelcount = threadsCount;
   int temp;
 
-  if ( i < 7*levelcount)
+  if ( i < 8*levelcount)
     return -1; // level 0, check rays
 
-  while ( (index + 7*levelcount) <= i){
+  while ( (index + 8*levelcount) <= i){
     temp = levelcount;
-    index += 7*levelcount;
+    index += 8*levelcount;
     levelcount = (levelcount+1)/2;
   }
   int offset = i - index;
 
-  return (index - 7*temp) + 2*offset;
+  return (index - 8*temp) + 2*offset;
+}
+
+int computeRIndex (unsigned int j, const __global float* cones){
+  int rindex = 0;
+  for ( int i = 0; i < j; i += 8){
+      rindex += cones[i + 7];
+  }
+  return rindex;
 }
 
 __kernel void IntersectionR (
@@ -319,9 +328,9 @@ __kernel void IntersectionR (
  __global int* stat_rayTriangle,
 #endif
     __local int* stack,
-     int count, int size, int chunk, int height
+     int count, int size, int chunk, int height, unsigned int threadsCount
 ) {
-    // find position in global arrays
+    // find position in global and shared arrays
     int iGID = get_global_id(0);
     int iLID = get_local_id(0);
     #ifdef STAT_TRIANGLE_CONE
@@ -331,34 +340,29 @@ __kernel void IntersectionR (
     // bound check (equivalent to the limit on a 'for' loop for standard/serial C code
     if (iGID >= size) return;
 
-    /*for ( int i = iGID; i < count; i+=size ){
-      index[i] = 0; //initialize the array
-    }*/
-
     // find geometry for the work-item
-    float4 e1, e2, test;
-    float  t;
+    float3 e1, e2;
 
-    float4 v1, v2, v3, rayd, rayo;
-    v1 = (float4)(vertex[9*iGID], vertex[9*iGID+1], vertex[9*iGID+2], 0);
-    v2 = (float4)(vertex[9*iGID + 3], vertex[9*iGID + 4], vertex[9*iGID + 5], 0);
-    v3 = (float4)(vertex[9*iGID + 6], vertex[9*iGID + 7], vertex[9*iGID + 8], 0);
+    float3 v1, v2, v3;
+    v1 = (float3)(vertex[9*iGID], vertex[9*iGID+1], vertex[9*iGID+2]);
+    v2 = (float3)(vertex[9*iGID + 3], vertex[9*iGID + 4], vertex[9*iGID + 5]);
+    v3 = (float3)(vertex[9*iGID + 6], vertex[9*iGID + 7], vertex[9*iGID + 8]);
     e1 = v2 - v1;
     e2 = v3 - v1;
 
     //calculate bounding sphere
     //vizualizace pruseciku s paprskem a kuzel,trojuhelnikem, ktery se pocitaly
 
-    float4 center; float radius;
+    float3 center; float radius;
     //bounding sphere center - center of mass
     center = (v1+v2+v3)/3;
     radius = length(v1-center);
 
-    float4 a,x;
+    float3 a,x;
     float fi;
 
     //find number of elements in top level of the ray hieararchy
-    uint levelcount = (count+chunk-1)/chunk; //end of level0
+    uint levelcount = threadsCount; //end of level0
     uint num = 0;
     uint lastlevelnum = 0;
 
@@ -369,17 +373,17 @@ __kernel void IntersectionR (
     }
 
     int SPindex = 0;
-    uint begin;
+    uint begin, rindex;
     int i = 0;
     int child;
     float len;
 
+    begin = 8*num;
     for ( int j = 0; j < levelcount; j++){
       // get cone description
-      begin = 7*num;
-      a = (float4)(cones[begin + 7*j],cones[begin + 7*j+1],cones[begin + 7*j+2],0);
-      x = (float4)(cones[begin + 7*j+3],cones[begin + 7*j+4],cones[begin + 7*j+5],0);
-      fi = cones[begin + 7*j+6];
+      a = (float3)(cones[begin + 8*j],cones[begin + 8*j+1],cones[begin + 8*j+2]);
+      x = (float3)(cones[begin + 8*j+3],cones[begin + 8*j+4],cones[begin + 8*j+5]);
+      fi = cones[begin + 8*j+6];
       // check if triangle intersects cone
       len = length(center-a);
       if ( acos(dot((center-a)/len,x)) - asin(radius/len) < fi)
@@ -388,13 +392,13 @@ __kernel void IntersectionR (
          ++stat_triangleCone[iGID];
         #endif
         //store child to the stack
-        stack[iLID*(height) + SPindex++] = begin - 7*lastlevelnum + 14*j;
+        stack[iLID*(height) + SPindex++] = begin - 8*lastlevelnum + 16*j;
         while ( SPindex > 0 ){
           //take the cones from the stack and check them
           --SPindex;
           i = stack[iLID*(height) + SPindex];
-          a = (float4)(cones[i],cones[i+1],cones[i+2],0);
-          x = (float4)(cones[i+3],cones[i+4],cones[i+5],0);
+          a = (float3)(cones[i],cones[i+1],cones[i+2]);
+          x = (float3)(cones[i+3],cones[i+4],cones[i+5]);
           fi = cones[i+6];
           len = length(center-a);
           if ( len < EPS || acos(dot((center-a)/len,x)) - asin(radius/len) < fi)
@@ -402,35 +406,39 @@ __kernel void IntersectionR (
             #ifdef STAT_PICTURE
              ++stat_triangleCone[iGID];
             #endif
-            child = computeChild (count, chunk, i);
+            child = computeChild(threadsCount,i);
             //if the cones is at level 0 - check leaves
-            if ( child < 0)
-              intersectAllLeaves(i/7, dir, o, bounds, index, tHit, v1,v2,v3,e1,e2,chunk,count
+            if ( child < 0) {
+              rindex = computeRIndex(i, cones);
+              intersectAllLeaves( dir, o, bounds, index, tHit, v1,v2,v3,e1,e2,cones[i+7], rindex
               #ifdef STAT_RAY_TRIANGLE
                 , stat_rayTriangle
               #endif
               );
+            }
             else {
               //save the intersected cone to the stack
               stack[iLID*(height) + SPindex++] = child;
             }
           }
-          a = (float4)(cones[i+7],cones[i+8],cones[i+9],0);
-          x = (float4)(cones[i+10],cones[i+11],cones[i+12],0);
-          fi = cones[i+13];
+          a = (float3)(cones[i+8],cones[i+9],cones[i+10]);
+          x = (float3)(cones[i+11],cones[i+12],cones[i+13]);
+          fi = cones[i+14];
           if ( len < EPS || acos(dot((center-a)/len,x)) - asin(radius/len) < fi)
          {
             #ifdef STAT_TRIANGLE_CONE
              ++stat_triangleCone[iGID];
             #endif
-            child = computeChild (count, chunk, i+7);
+            child = computeChild (threadsCount, i+8);
             //if the cone is at level 0 - check leaves
-            if ( child < 0)
-              intersectAllLeaves(i/7+1, dir, o, bounds, index, tHit, v1,v2,v3,e1,e2,chunk,count
+            if ( child < 0) {
+              rindex = computeRIndex(i + 8, cones);
+              intersectAllLeaves( dir, o, bounds, index, tHit, v1,v2,v3,e1,e2,cones[i+15],rindex
               #ifdef STAT_RAY_TRIANGLE
                 , stat_rayTriangle
               #endif
               );
+            }
             else {
               stack[iLID*(height) + SPindex++] = child;
             }
@@ -448,33 +456,32 @@ __kernel void IntersectionR (
 __kernel void IntersectionP (
 const __global float* vertex, const __global float* dir, const __global float* o,
  const __global float* cones, const __global float* bounds,
-__global unsigned char* tHit, __local int* stack, int count, int size, int chunk, int height)
+__global unsigned char* tHit, __local int* stack, int count, int size, int chunk, int height,unsigned int threadsCount)
 {
     int iGID = get_global_id(0);
     int iLID = get_local_id(0);
     if (iGID >= size) return;
 
     // process all geometry
-    float4 e1, e2, s1, s2, d, test;
-    float divisor, invDivisor, b1, b2, t;
+    float3 e1, e2;
 
-    float4 v1, v2, v3, rayd, rayo;
-    v1 = (float4)(vertex[9*iGID], vertex[9*iGID+1], vertex[9*iGID+2], 0);
-    v2 = (float4)(vertex[9*iGID + 3], vertex[9*iGID + 4], vertex[9*iGID + 5], 0);
-    v3 = (float4)(vertex[9*iGID + 6], vertex[9*iGID + 7], vertex[9*iGID + 8], 0);
+    float3 v1, v2, v3;
+    v1 = (float3)(vertex[9*iGID], vertex[9*iGID+1], vertex[9*iGID+2]);
+    v2 = (float3)(vertex[9*iGID + 3], vertex[9*iGID + 4], vertex[9*iGID + 5]);
+    v3 = (float3)(vertex[9*iGID + 6], vertex[9*iGID + 7], vertex[9*iGID + 8]);
     e1 = v2 - v1;
     e2 = v3 - v1;
 
-    float4 center; float radius;
+    float3 center; float radius;
     center = (v1+v2+v3)/3;
     radius = length(v1-center);
 
-    float4 a,x;
+    float3 a,x;
     float fi;
     float len;
 
     //find number of elements in top level of the ray hieararchy
-    uint levelcount = (count+chunk-1)/chunk; //end of level0
+    uint levelcount = threadsCount; //end of level0
     uint num = 0;
     uint lastlevelnum = 0;
 
@@ -485,50 +492,54 @@ __global unsigned char* tHit, __local int* stack, int count, int size, int chunk
     }
 
     int SPindex = 0;
-    uint begin;
+    uint begin,rindex;
     int i = 0;
     int child;
 
+    begin = 8*num;
     for ( int j = 0; j < levelcount; j++){
       // get cone description
-      begin = 7*num;
-      a = (float4)(cones[begin + 7*j],cones[begin + 7*j+1],cones[begin + 7*j+2],0);
-      x = (float4)(cones[begin + 7*j+3],cones[begin + 7*j+4],cones[begin + 7*j+5],0);
-      fi = cones[begin + 7*j+6];
+      a = (float3)(cones[begin + 8*j],cones[begin + 8*j+1],cones[begin + 8*j+2]);
+      x = (float3)(cones[begin + 8*j+3],cones[begin + 8*j+4],cones[begin + 8*j+5]);
+      fi = cones[begin + 8*j+6];
       // check if triangle intersects cone
       len = length(center-a);
       if ( acos(dot((center-a)/len,x)) - asin(radius/len) < fi)
       {
         //store child to the stack
-        stack[iLID*height + SPindex++] = begin - 7*lastlevelnum + 14*j;
+        stack[iLID*height + SPindex++] = begin - 8*lastlevelnum + 16*j;
         while ( SPindex > 0 ){
           //take the cones from the stack and check them
           --SPindex;
           i = stack[iLID*height + SPindex];
-          a = (float4)(cones[i],cones[i+1],cones[i+2],0);
-          x = (float4)(cones[i+3],cones[i+4],cones[i+5],0);
+          a = (float3)(cones[i],cones[i+1],cones[i+2]);
+          x = (float3)(cones[i+3],cones[i+4],cones[i+5]);
           fi = cones[i+6];
           len = length(center-a);
-          //if ( len < EPS || acos(dot((center-a)/len,x)) - asin(radius/len) < fi)
+          if ( len < EPS || acos(dot((center-a)/len,x)) - asin(radius/len) < fi)
           {
-            child = computeChild (count, chunk, i);
+            child = computeChild (threadsCount, i);
             //if the cones is at level 0 - check leaves
-            if ( child < 0)
-              intersectPAllLeaves(i/7, dir, o, bounds, tHit, v1,v2,v3,e1,e2,chunk);
+            if ( child < 0){
+              rindex = computeRIndex(i,cones);
+              intersectPAllLeaves( dir, o, bounds, tHit, v1,v2,v3,e1,e2,cones[7],rindex);
+            }
             else {
               //save the intersected cone to the stack
               stack[iLID*height + SPindex++] = child;
             }
           }
-          a = (float4)(cones[i+7],cones[i+8],cones[i+9],0);
-          x = (float4)(cones[i+10],cones[i+11],cones[i+12],0);
-          fi = cones[i+13];
-         // if ( len < EPS || acos(dot((center-a)/len,x)) - asin(radius/len) < fi)
+          a = (float3)(cones[i+8],cones[i+9],cones[i+10]);
+          x = (float3)(cones[i+11],cones[i+12],cones[i+13]);
+          fi = cones[i+14];
+          if ( len < EPS || acos(dot((center-a)/len,x)) - asin(radius/len) < fi)
          {
-            child = computeChild (count, chunk, i+7);
+            child = computeChild (threadsCount, i+8);
             //if the cone is at level 0 - check leaves
-            if ( child < 0)
-              intersectPAllLeaves(i/7+1, dir, o, bounds, tHit, v1,v2,v3,e1,e2,chunk);
+            if ( child < 0) {
+              rindex = computeRIndex(i + 8, cones);
+              intersectPAllLeaves( dir, o, bounds, tHit, v1,v2,v3,e1,e2,cones[i+15],rindex);
+            }
             else {
               stack[iLID*height + SPindex++] = child;
             }
@@ -537,7 +548,6 @@ __global unsigned char* tHit, __local int* stack, int count, int size, int chunk
       }
 
     }
-
 
 }
 

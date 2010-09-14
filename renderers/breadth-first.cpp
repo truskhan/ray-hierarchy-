@@ -151,7 +151,7 @@ void breadthFirst::Li(const Scene *scene, const RayDifferential* ray,
         Intersection *isect, Spectrum *T , Spectrum *Ls, float* rayWeight, int count ) const {
   bool* hit = new bool[count];
   Spectrum* Lo = new Spectrum[count];
-  scene->Intersect(ray, isect, hit, rayWeight, count
+  scene->Intersect(ray, isect, hit, rayWeight, count, camera->film->xResolution, camera->film->yResolution
   #ifdef STAT_RAY_TRIANGLE
   , Ls);
   delete [] hit;

@@ -63,7 +63,8 @@ unsigned int Scene::MaxRaysPerCall() const {
     return 0;
 }
 
-void Scene::Intersect(const RayDifferential* ray, Intersection *isect, bool* hit, float* rayWeight,int & count
+void Scene::Intersect(const RayDifferential* ray, Intersection *isect, bool* hit, float* rayWeight,int & count,
+const unsigned int & xRes, const unsigned int & yRes
 #ifdef STAT_RAY_TRIANGLE
 , Spectrum *Ls
 #endif
@@ -74,7 +75,7 @@ void Scene::Intersect(const RayDifferential* ray, Intersection *isect, bool* hit
     else {
       RayHieararchy* rh = dynamic_cast<RayHieararchy*>(aggregate);
       if ( rh != NULL)
-        rh->Intersect(ray, isect, rayWeight, hit,count
+        rh->Intersect(ray, isect, rayWeight, hit,count, xRes, yRes
         #ifdef STAT_RAY_TRIANGLE
         , Ls
         #endif
