@@ -13,6 +13,7 @@
 #define KERNEL_RAYCONSTRUCT 2
 #define KERNEL_INTERSECTIONP 4
 #define KERNEL_INTERSECTIONR 3
+#define KERNEL_YETANOTHERINTERSECTION 5
 
 using namespace std;
 Semaphore *workerSemaphore;
@@ -30,7 +31,7 @@ RayHieararchy::RayHieararchy(const vector<Reference<Primitive> > &p, bool onG, i
     ocl->CompileProgram("../cl/rayhierarchy.cl", PbrtOptions.pbrt_path, "rayhconstruct", "oclRayhconstruct.ptx",KERNEL_RAYCONSTRUCT);
     ocl->CompileProgram("../cl/rayhierarchy.cl", PbrtOptions.pbrt_path, "IntersectionP", "oclIntersectionP.ptx", KERNEL_INTERSECTIONP);
     ocl->CompileProgram("../cl/rayhierarchy.cl", PbrtOptions.pbrt_path, "levelConstruct", "oclLevelConstruct.ptx",KERNEL_RAYLEVELCONSTRUCT);
-
+    ocl->CompileProgram("../cl/rayhierarchy.cl", PbrtOptions.pbrt_path, "YetAnotherIntersection", "oclYetAnotherIntersection.ptx", KERNEL_YETANOTHERINTERSECTION);
     ocl->CompileProgram("../cl/rayhierarchy.cl", PbrtOptions.pbrt_path, "computeDpTuTv", "oclcomputeDpTuTv.ptx", KERNEL_COMPUTEDPTUTV);
     cmd = ocl->CreateCmdQueue();
 
@@ -122,7 +123,7 @@ BBox RayHieararchy::WorldBound() const {
 unsigned int RayHieararchy::MaxRaysPerCall(){
     //TODO: check the OpenCL device and decide, how many rays can be processed at one thread
     // check how many threads can be proccessed at once
-    return 100000;
+    return 20000;
 }
 
 //classical method for testing one ray
@@ -245,12 +246,14 @@ size_t RayHieararchy::ConstructRayHierarchy(cl_float* rayDir, cl_float* rayO, cl
 //intersect computed on gpu with more rays
 void RayHieararchy::Intersect(const RayDifferential *r, Intersection *in,
                                float* rayWeight, bool* hit, unsigned int count,
-                               const unsigned int & xResolution, const unsigned int & yResolution
+                               const unsigned int & xResolution, const unsigned int & yResolution,
+                               const unsigned int & samplesPerPixel
   #ifdef STAT_RAY_TRIANGLE
   , Spectrum *Ls
   #endif
   )  {
   this->xResolution = xResolution;
+  this->samplesPerPixel = samplesPerPixel;
   //number of rectangles in x axis
   global_a = (xResolution + a - 1) / a; //round up -> +a-1
   //number of rectangles in y axis
@@ -277,7 +280,9 @@ void RayHieararchy::Intersect(const RayDifferential *r, Intersection *in,
   unsigned int new_a, new_b;
   unsigned int elem_counter = 0;
   unsigned int number;
+  unsigned int pixel_counter = 0;
 
+  //TODO: try Z-curve order?
   //store those rectangles, loop through all threads <==> all rectangles
   for (unsigned int k = 0; k < threadsCount; ++k){
     new_a = a; new_b = b;
@@ -294,37 +299,41 @@ void RayHieararchy::Intersect(const RayDifferential *r, Intersection *in,
       new_b -= rest_y;
     }
 
-    countArray[k] = number;
+    countArray[k] = number*samplesPerPixel;
     //loop inside small rectangle
     for (unsigned int j = 0; j < number; j++){
       iy = j / new_a;
       ix = j - iy*new_a;
 
-      help = iy*xResolution + ix + global_ix*a + global_iy*xResolution*b;
-      elem_index[help] = elem_counter;
-      rayDirArray[3*elem_counter] = r[help].d[0];
-      rayDirArray[3*elem_counter + 1] = r[help].d[1];
-      rayDirArray[3*elem_counter + 2] = r[help].d[2];
+      help = iy*xResolution*samplesPerPixel + ix*samplesPerPixel + global_ix*a*samplesPerPixel + global_iy*xResolution*b*samplesPerPixel;
 
-      rayOArray[3*elem_counter] = r[help].o[0];
-      rayOArray[3*elem_counter + 1] = r[help].o[1];
-      rayOArray[3*elem_counter + 2] = r[help].o[2];
+      for ( unsigned int s = 0; s < samplesPerPixel; s++){
+        elem_index[help] = elem_counter;
+        rayDirArray[3*elem_counter] = r[help].d[0];
+        rayDirArray[3*elem_counter + 1] = r[help].d[1];
+        rayDirArray[3*elem_counter + 2] = r[help].d[2];
 
-      rayBoundsArray[2*elem_counter] = r[help].mint;
-      rayBoundsArray[2*elem_counter + 1] = INFINITY;
+        rayOArray[3*elem_counter] = r[help].o[0];
+        rayOArray[3*elem_counter + 1] = r[help].o[1];
+        rayOArray[3*elem_counter + 2] = r[help].o[2];
 
-      indexArray[elem_counter] = 0;
-      tHitArray[elem_counter] = INFINITY-1; //should initialize on scene size
+        rayBoundsArray[2*elem_counter] = r[help].mint;
+        rayBoundsArray[2*elem_counter + 1] = INFINITY;
 
-      #ifdef STAT_RAY_TRIANGLE
-      ((cl_uint*)data[10])[elem_counter] = 0;
-      #endif
+        indexArray[elem_counter] = 0;
+        tHitArray[elem_counter] = INFINITY-1; //should initialize on scene size
 
-      ++elem_counter;
+        #ifdef STAT_RAY_TRIANGLE
+        ((cl_uint*)data[10])[elem_counter] = 0;
+        #endif
+
+        ++elem_counter;
+        ++help;
+      }
+      ++pixel_counter;
     }
 
   }
-
 
     workerSemaphore->Wait();
     size_t tn1 = ConstructRayHierarchy(rayDirArray, rayOArray, count, countArray, threadsCount);
@@ -371,9 +380,8 @@ void RayHieararchy::Intersect(const RayDifferential *r, Intersection *in,
     Assert(gput->EnqueueWriteBuffer( c, data[10]));
     #endif
     if (!gput->Run())exit(EXIT_FAILURE);
+    gput->WaitForKernel();
 
-    if (!gput->EnqueueReadBuffer( 5, tHitArray)) exit(EXIT_FAILURE);
-    if (!gput->EnqueueReadBuffer( 6, indexArray)) exit(EXIT_FAILURE);
     #ifdef STAT_RAY_TRIANGLE
     Assert(gput->EnqueueReadBuffer( c, data[10]));
     uint i = 0;
@@ -397,10 +405,40 @@ void RayHieararchy::Intersect(const RayDifferential *r, Intersection *in,
     abort();
     #endif
 
-    Assert(!gput->SetPersistentBuff(0));//vertex
-    Assert(!gput->SetPersistentBuff(1));//dir
-    Assert(!gput->SetPersistentBuff(2));//origin
-    Assert(!gput->SetPersistentBuff(6));//index
+    Assert(!gput->SetPersistentBuffers(0,7)); //vertex,dir,o, cones, ray bounds, tHit, indexArray
+
+    //counter for changes in ray-triangle intersection
+    cl_uint* changedArray = new cl_uint[triangleCount];
+    memset(changedArray, 0, sizeof(cl_uint)*triangleCount);
+
+    size_t tn4 = ocl->CreateTask(KERNEL_YETANOTHERINTERSECTION, triangleCount , cmd, 32);
+    OpenCLTask* anotherIntersect = ocl->getTask(tn4, cmd);
+    anotherIntersect->InitBuffers(8);
+    anotherIntersect->CopyBuffers(0,7,0,gput);
+    Assert(anotherIntersect->CreateBuffer(7,sizeof(cl_uint)*triangleCount, CL_MEM_WRITE_ONLY)); //recording changes
+
+    Assert(anotherIntersect->SetLocalArgument(8,sizeof(cl_int)*64*(height))); //stack for every thread
+    Assert(anotherIntersect->SetIntArgument(9,(cl_int)count));
+    Assert(anotherIntersect->SetIntArgument(10,(cl_int)triangleCount));
+    Assert(anotherIntersect->SetIntArgument(11,(cl_int)chunk));
+    Assert(anotherIntersect->SetIntArgument(12,(cl_int)height));
+    Assert(anotherIntersect->SetIntArgument(13,(cl_int)threadsCount));
+    //TODO: make only one counter per work-group, use local memory
+    if (!anotherIntersect->EnqueueWriteBuffer( 7 , changedArray)) exit(EXIT_FAILURE);
+    if (!anotherIntersect->Run())exit(EXIT_FAILURE);
+    if (!anotherIntersect->EnqueueReadBuffer( 7, changedArray ))exit(EXIT_FAILURE);
+    if (!anotherIntersect->EnqueueReadBuffer( 5, tHitArray)) exit(EXIT_FAILURE);
+    if (!anotherIntersect->EnqueueReadBuffer( 6, indexArray)) exit(EXIT_FAILURE);
+    anotherIntersect->WaitForRead();
+    for ( int i = 0; i < triangleCount; i++){
+      if ( changedArray[i] == 1)
+        cout << "OPRAVA" << endl;
+    }
+
+    Assert(!anotherIntersect->SetPersistentBuff(0));//vertex
+    Assert(!anotherIntersect->SetPersistentBuff(1));//dir
+    Assert(!anotherIntersect->SetPersistentBuff(2));//origin
+    Assert(!anotherIntersect->SetPersistentBuff(6));//index
 
     size_t tn3 = ocl->CreateTask(KERNEL_COMPUTEDPTUTV, count, cmd, 32);
     OpenCLTask* gpuRayO = ocl->getTask(tn3,cmd);
@@ -422,10 +460,11 @@ void RayHieararchy::Intersect(const RayDifferential *r, Intersection *in,
     if (!gpuRayO->EnqueueReadBuffer( 5, tutvArray ))exit(EXIT_FAILURE);
     if (!gpuRayO->EnqueueReadBuffer( 6, dpduArray ))exit(EXIT_FAILURE);
 
+    gpuRayO->WaitForRead();
     ocl->delTask(tn1,cmd);
     ocl->delTask(tn2,cmd);
     ocl->delTask(tn3,cmd);
-    gpuRayO->WaitForRead();
+    ocl->delTask(tn4,cmd);
     workerSemaphore->Post();
     cl_uint index;
 
@@ -516,6 +555,7 @@ void RayHieararchy::IntersectP(const Ray* r, unsigned char* occluded, const size
   unsigned int new_a, new_b;
   unsigned int elem_counter = 0;
   unsigned int number;
+  unsigned int pixel_counter = 0;
 
   //store those rectangles
   for (unsigned int k = 0; k < threadsCount; ++k){
@@ -533,28 +573,33 @@ void RayHieararchy::IntersectP(const Ray* r, unsigned char* occluded, const size
       new_b -= rest_y;
     }
 
-    countArray[k] = number;
+    countArray[k] = number*samplesPerPixel;
 
-    for (unsigned int j = 0; j < number; j++){
+    for (unsigned int j = 0; j < countArray[k]; j++){
       iy = j / new_a;
       ix = j - iy*new_a;
 
-      help = iy*xResolution + ix + global_ix*a + global_iy*xResolution*b;
-      elem_index[help] = elem_counter;
-      rayDirArray[3*elem_counter] = r[help].d[0];
-      rayDirArray[3*elem_counter + 1] = r[help].d[1];
-      rayDirArray[3*elem_counter + 2] = r[help].d[2];
+      help = iy*xResolution*samplesPerPixel + ix*samplesPerPixel + global_ix*a*samplesPerPixel + global_iy*xResolution*b*samplesPerPixel;
 
-      rayOArray[3*elem_counter] = r[help].o[0];
-      rayOArray[3*elem_counter + 1] = r[help].o[1];
-      rayOArray[3*elem_counter + 2] = r[help].o[2];
+      for ( unsigned int s = 0; s < samplesPerPixel; s++){
+        elem_index[help] = elem_counter;
+        rayDirArray[3*elem_counter] = r[help].d[0];
+        rayDirArray[3*elem_counter + 1] = r[help].d[1];
+        rayDirArray[3*elem_counter + 2] = r[help].d[2];
 
-      rayBoundsArray[2*elem_counter] = r[help].mint;
-      rayBoundsArray[2*elem_counter + 1] = INFINITY;
+        rayOArray[3*elem_counter] = r[help].o[0];
+        rayOArray[3*elem_counter + 1] = r[help].o[1];
+        rayOArray[3*elem_counter + 2] = r[help].o[2];
 
-      occluded[elem_counter] = '0';
+        rayBoundsArray[2*elem_counter] = r[help].mint;
+        rayBoundsArray[2*elem_counter + 1] = INFINITY;
+        //TODO: initialize on GPU, make special init kernel for this task -> reduce data transfer
+        occluded[elem_counter] = '0';
 
-      ++elem_counter;
+        ++elem_counter;
+        ++help;
+      }
+      ++pixel_counter;
     }
 
   }

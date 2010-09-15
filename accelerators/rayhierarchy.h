@@ -16,7 +16,7 @@ public:
     bool CanIntersect() const { return true; }
     ~RayHieararchy();
     void Intersect(const RayDifferential *r, Intersection *in, float* rayWeight, bool* hit, unsigned int count,
-    const unsigned int & xResolution, const unsigned int & yResolution
+    const unsigned int & xResolution, const unsigned int & yResolution, const unsigned int & samplesPerPixel
     #ifdef STAT_RAY_TRIANGLE
     , Spectrum *Ls
     #endif
@@ -44,6 +44,7 @@ private:
     OpenCL* ocl; //pointer to OpenCL auxiliary functions
     size_t cmd; //index to command queue
     unsigned a,b, global_a,global_b;
+    unsigned samplesPerPixel;
     cl_uint threadsCount;
     unsigned int rest_x, rest_y;
     mutable unsigned int xResolution;

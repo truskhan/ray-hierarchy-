@@ -202,6 +202,7 @@
 		<Unit filename="renderers/aggregatetest.cpp" />
 		<Unit filename="renderers/aggregatetest.h" />
 		<Unit filename="renderers/breadth-first.cpp" />
+		<Unit filename="renderers/breadth-first.h" />
 		<Unit filename="renderers/createprobes.cpp" />
 		<Unit filename="renderers/createprobes.h" />
 		<Unit filename="renderers/gpurenderer.h" />

@@ -37,7 +37,9 @@ void breadthFirstTask::Run() {
     int counter = 0;
     int temp = 0;
 
-    while ((sampleCount != maxSamples) && (temp = sampler->GetMoreSamples(&samples[counter],rng)>0)){
+    while (sampleCount != maxSamples ){
+      temp = sampler->GetMoreSamples(&samples[counter],rng);
+      if ( temp == 0 ) break;
       ++counter;
       sampleCount += temp; //we just take one sample per pixel, so it could be +1
     }
@@ -151,7 +153,8 @@ void breadthFirst::Li(const Scene *scene, const RayDifferential* ray,
         Intersection *isect, Spectrum *T , Spectrum *Ls, float* rayWeight, int count ) const {
   bool* hit = new bool[count];
   Spectrum* Lo = new Spectrum[count];
-  scene->Intersect(ray, isect, hit, rayWeight, count, camera->film->xResolution, camera->film->yResolution
+  scene->Intersect(ray, isect, hit, rayWeight, count, camera->film->xResolution, camera->film->yResolution,
+    sampler->samplesPerPixel
   #ifdef STAT_RAY_TRIANGLE
   , Ls);
   delete [] hit;

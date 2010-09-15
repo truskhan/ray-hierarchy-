@@ -59,6 +59,13 @@ class OpenCLTask {
     void CopyBuffer(size_t src, size_t dst, OpenCLTask* oclt);
     void CopyBuffers(size_t srcstart, size_t srcend, size_t dststart, OpenCLTask* oclt);
     int SetPersistentBuff( size_t i ) { return clRetainMemObject(cmBuffers[i]);}
+    int SetPersistentBuffers( size_t start, size_t end){
+      int result = CL_SUCCESS;
+      for ( size_t i = start; i < end; i++){
+        result |= clRetainMemObject(cmBuffers[i]);
+      }
+      return result;
+    }
     bool SetIntArgument(const size_t & it, const cl_int & arg);
     bool SetLocalArgument(const size_t & it, const size_t & size);
     bool EnqueueWriteBuffer(cl_mem_flags* flags,void** data);
